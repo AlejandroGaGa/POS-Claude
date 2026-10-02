@@ -1,0 +1,261 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+
+/*
+ * Tema "Herrajes": superficies cálidas, acento ciruela profundo y tipografía
+ * Fraunces (títulos y cifras) + Inter (texto). Variables de HeroUI v3.
+ */
+@layer base {
+  :root,
+  .light,
+  [data-theme="light"] {
+    --radius: 0.875rem;
+    --field-radius: 0.75rem;
+
+    --background: oklch(0.972 0.004 300);
+    --foreground: oklch(0.2 0.02 300);
+
+    --surface: oklch(1 0 0);
+    --surface-secondary: oklch(0.962 0.006 300);
+    --surface-tertiary: oklch(0.94 0.008 300);
+
+    --overlay: oklch(1 0 0);
+    --muted: oklch(0.5 0.018 300);
+
+    --default: oklch(0.948 0.007 300);
+    --default-foreground: oklch(0.2 0.02 300);
+
+    --accent: oklch(0.34 0.08 310);
+    --accent-foreground: oklch(0.99 0 0);
+
+    --success: oklch(0.56 0.14 150);
+    --success-foreground: oklch(0.99 0 0);
+    --warning: oklch(0.78 0.15 72);
+    --warning-foreground: oklch(0.22 0.02 60);
+    --danger: oklch(0.58 0.2 25);
+    --danger-foreground: oklch(0.99 0 0);
+
+    --field-background: oklch(1 0 0);
+    --field-border: oklch(0.9 0.008 300);
+    --border: oklch(0.915 0.007 300);
+    --separator: oklch(0.93 0.006 300);
+
+    --surface-shadow: 0 1px 2px 0 rgb(40 20 60 / 0.04), 0 0 0 1px rgb(40 20 60 / 0.03);
+    --field-shadow: none;
+    --overlay-shadow: 0 12px 40px -8px rgb(40 20 60 / 0.18), 0 2px 6px rgb(40 20 60 / 0.06);
+
+    /* Banner oscuro (resumen del día) */
+    --hero-from: oklch(0.24 0.05 300);
+    --hero-to: oklch(0.33 0.08 330);
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    --background: oklch(0.16 0.01 300);
+    --foreground: oklch(0.96 0.005 300);
+
+    --surface: oklch(0.21 0.012 300);
+    --surface-secondary: oklch(0.25 0.014 300);
+    --surface-tertiary: oklch(0.28 0.016 300);
+
+    --overlay: oklch(0.23 0.012 300);
+    --muted: oklch(0.74 0.015 300);
+
+    --default: oklch(0.27 0.014 300);
+    --default-foreground: oklch(0.96 0.005 300);
+
+    --accent: oklch(0.8 0.09 310);
+    --accent-foreground: oklch(0.2 0.03 300);
+
+    --success: oklch(0.75 0.15 150);
+    --success-foreground: oklch(0.2 0.03 150);
+    --warning: oklch(0.82 0.14 75);
+    --warning-foreground: oklch(0.22 0.02 60);
+    --danger: oklch(0.7 0.18 25);
+    --danger-foreground: oklch(0.18 0.02 25);
+
+    --field-background: oklch(0.24 0.013 300);
+    --field-border: oklch(0.33 0.016 300);
+    --border: oklch(0.3 0.015 300);
+    --separator: oklch(0.28 0.014 300);
+
+    --surface-shadow: 0 0 0 1px rgb(255 255 255 / 0.04);
+
+    --hero-from: oklch(0.26 0.05 300);
+    --hero-to: oklch(0.34 0.08 330);
+  }
+}
+
+/* Alias de colores usados en la app (mapeados a las variables de HeroUI). */
+@theme inline {
+  --color-bg: var(--background);
+  --color-surface-2: var(--surface-secondary);
+  --color-line: var(--border);
+  --color-ink: var(--foreground);
+  --color-accent-ink: var(--accent-foreground);
+  --color-ok: var(--success);
+  --color-ok-soft: var(--success-soft);
+  --color-warn: var(--warning-soft-foreground);
+  --color-warn-soft: var(--warning-soft);
+  --color-bad: var(--danger);
+  --color-bad-soft: var(--danger-soft);
+
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces Variable", ui-serif, Georgia, "Times New Roman", serif;
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.01em;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/*
+ * Medidas compartidas para elementos fijos (sticky):
+ * --app-top: alto de la barra superior del celular (0 en escritorio, donde hay barra lateral)
+ * --page-header-h: alto del encabezado de página fijo (lo mide <PageHeader>)
+ * --app-bottom: alto de la barra inferior del celular
+ */
+:root {
+  --app-top: 4rem;
+  --app-bottom: calc(4rem + env(safe-area-inset-bottom));
+  --page-header-h: 0px;
+  --sticky-top: calc(var(--app-top) + var(--page-header-h));
+}
+@media (min-width: 1024px) {
+  :root {
+    --app-top: 0px;
+    --app-bottom: 0px;
+  }
+}
+
+/* Tablas: mismo estilo en todo el sistema y encabezado fijo al hacer scroll */
+.data-table thead th {
+  position: sticky;
+  top: var(--sticky-top);
+  z-index: 5;
+  background: color-mix(in oklab, var(--background) 92%, transparent);
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+.data-table .table__scroll-container {
+  overflow: visible;
+}
+.data-table .table__column,
+.data-table .table__cell {
+  padding-inline: 0.875rem;
+}
+@media (max-width: 767px) {
+  .data-table.data-table--scroll .table__scroll-container {
+    overflow-x: auto;
+  }
+}
+
+/* Skeletons: bloque con brillo que recorre de izquierda a derecha */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: color-mix(in oklab, var(--default), var(--foreground) 5%);
+  border-radius: 0.625rem;
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--surface) 65%, transparent), transparent);
+  animation: skeleton-shimmer 1.35s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after {
+    animation: none;
+    display: none;
+  }
+}
+
+/* Mientras se aplican filtros o se cambia de página, los resultados se atenúan */
+[data-results] {
+  transition: opacity 0.18s ease;
+}
+html[data-nav-pending] [data-results] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* Días fuera de rango (futuro) en los calendarios */
+.range-calendar__cell[data-disabled="true"],
+.calendar__cell[data-disabled="true"] {
+  opacity: 0.35;
+}
+
+/* Barras de desplazamiento horizontales para chips/carruseles */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Impresión del ticket / nota */
+@media print {
+  @page {
+    margin: 10mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: 0 !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .print-area * {
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+}
