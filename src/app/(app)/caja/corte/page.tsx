@@ -14,9 +14,11 @@ export default async function CortePage() {
   await connectDB();
   const s = await periodSummary();
   const rows: [string, number, string?][] = [
-    ["Fondo inicial", s.openingFloat],
+    [s.lastCutFolio ? `Fondo que dejó el corte ${s.lastCutFolio}` : "Fondo inicial", s.openingFloat],
     ["Ventas en efectivo", s.cashSales, "+"],
     ["Abonos en efectivo", s.cashPayments, "+"],
+    ...(s.returnCharges > 0 ? ([["Diferencias de cambios", s.returnCharges, "+"]] as [string, number, string][]) : []),
+    ...(s.refunds > 0 ? ([["Devoluciones en efectivo", s.refunds, "−"]] as [string, number, string][]) : []),
     ["Entradas de caja", s.entries, "+"],
     ["Salidas de caja", s.exits, "−"],
   ];

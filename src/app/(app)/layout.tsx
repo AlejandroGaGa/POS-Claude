@@ -10,6 +10,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/mostrador", label: "Mostrador", short: "Vender", icon: "cart", section: "General", primary: true },
     { href: "/cotizaciones", label: "Cotizaciones", short: "Cotizar", icon: "doc", section: "General", primary: true },
     { href: "/ventas", label: can(user.role, "sales:viewAll") ? "Ventas" : "Mis ventas", short: "Ventas", icon: "cash", section: "General", primary: true },
+    can(user.role, "returns:create") && { href: "/devoluciones", label: "Devoluciones y cambios", short: "Devolver", icon: "undo", section: "General" },
     { href: "/clientes", label: "Clientes", short: "Clientes", icon: "person", section: "General" },
     { href: "/por-cobrar", label: "Por cobrar", short: "Cobrar", icon: "hourglass", section: "General" },
     can(user.role, "cash:move") && { href: "/caja", label: "Caja", short: "Caja", icon: "vault", section: "Gestión" },

@@ -37,6 +37,18 @@ Next.js 15 (App Router) + MongoDB (Mongoose), listo para desplegar en Vercel con
 - **Caja**: entradas y salidas por concepto, **caja chica** con saldo propio («Poner fondo» / «Gasto»), traspasos entre
   cajas y **corte de caja**: fondo + ventas y abonos en efectivo + entradas − salidas = esperado, contra lo contado
   (por denominación o total), con faltante/sobrante, retiro (fuera o a caja chica), fondo que queda e impresión.
+- **Devoluciones y cambios** (folio `D-000001`): se busca la venta con un solo buscador — folio de la nota (`V-123`),
+  de la cotización de la que salió (`C-45`), de una devolución anterior (`D-7`), nombre del cliente aunque no esté
+  registrado (sin importar acentos), parte del teléfono o el producto. Se marca qué regresa (al **precio que pagó**;
+  la comisión de terminal no se regresa) y, si es cambio, qué se lleva (a **precio actual**). Tres formas de resolverlo:
+  | Forma | Ejemplo: regresa tira de $450, se lleva una de $589 |
+  |---|---|
+  | **Con diferencia** | Se cobran $139 (efectivo, transferencia o terminal). Al revés, se regresan $139 en efectivo de la caja. |
+  | **Cortesía** (sin diferencia) | No se cobra ni se regresa nada; queda registrado cuánto absorbió el negocio. |
+  | **Cobrar lo nuevo completo** | Se cobran los $589; lo devuelto no se acredita (sin reembolso). |
+  No deja devolver más de lo vendido (lleva la cuenta por renglón), si la nota debía saldo primero se abona ahí,
+  y entra al corte de caja (diferencias cobradas en efectivo suman, reembolsos restan). También hay **devolución sin nota**
+  (a precio de lista). Cada una tiene nota imprimible y se consulta en *Devoluciones y cambios*, en la venta y en el cliente.
 - **Paginación con MongoDB** (skip/limit + conteo) en todas las listas; el mostrador carga resultados por páginas.
 
 ## Roles

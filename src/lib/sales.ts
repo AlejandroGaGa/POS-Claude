@@ -7,6 +7,7 @@ import { nextFolio } from "./models/Counter";
 import { getSettings } from "./models/Settings";
 import { computeTotals, lineSignature, paymentLine, priceLine, round2, withUnitPrice, type CustomerType, type PaymentMethod, type ProductPricing } from "./pricing";
 import { Customer, phoneKey } from "./models/Customer";
+import { adjustLines, type AdjustOptions } from "./adjust";
 import { escapeRegex } from "./text";
 import type { SessionUser } from "./session";
 import type { z } from "zod";
@@ -33,10 +34,32 @@ export async function buildItems(lines: RawLine[], customerType: CustomerType = 
   });
 }
 
+/**
+ * Aplica «cobrar de más» (oculto) y descuento especial a renglones con precio de lista.
+ * Sin ajustes deja los renglones tal cual (las ventas normales no cambian de forma).
+ */
+/** «Cobrar de más» y «Descuento especial» son decisiones distintas: no se combinan en una misma nota. */
+function assertOneAdjust(opts: AdjustOptions) {
+  if ((opts.extra ?? 0) > 0 && (opts.discountPct ?? 0) > 0) {
+    throw new HttpError(400, "Elige solo un ajuste: cobrar de más o descuento especial, no los dos.");
+  }
+}
+
+function applyAdjust<T extends { qty: number; unitPrice: number; subtotal: number }>(lines: T[], opts: AdjustOptions) {
+  const a = adjustLines(lines, opts);
+  const any = a.extra > 0 || a.discountPct > 0;
+  return {
+    lines: any ? a.lines : lines,
+    fields: any
+      ? { extraAmount: a.extra, discountPct: a.discountPct, discountAmount: a.discountAmount, shownSubtotal: a.shownSubtotal }
+      : { extraAmount: 0, discountPct: 0, discountAmount: 0, shownSubtotal: null },
+  };
+}
+
 type PayInput = { paymentMethod?: PaymentMethod | null; commissionPct: number; cashReceived: number | null; payNow?: number | null };
 
 /** Construye un pago (con comisión y cambio) validando el efectivo recibido. */
-function makePayment(amount: number, method: PaymentMethod, pct: number, cashReceived: number | null, userName: string, note = "") {
+export function makePayment(amount: number, method: PaymentMethod, pct: number, cashReceived: number | null, userName: string, note = "") {
   const p = paymentLine(amount, method, method === "terminal" ? pct : 0);
   let cash: number | null = null;
   let change: number | null = null;
@@ -131,9 +154,13 @@ export async function createSale(
     notes: string;
     customerId?: string | null;
     payNow?: number | null;
+    extraAmount?: number | null;
+    discountPct?: number;
   },
 ) {
-  const items = await buildItems(input.items, input.customerType);
+  assertOneAdjust({ extra: input.extraAmount, discountPct: input.discountPct });
+  const adj = applyAdjust(await buildItems(input.items, input.customerType), { extra: input.extraAmount, discountPct: input.discountPct });
+  const items = adj.lines;
   const customer = await resolveCustomer(input);
   const base = {
     kind: input.kind,
@@ -145,6 +172,7 @@ export async function createSale(
     notes: input.notes,
     seller: user.id,
     sellerName: user.name,
+    ...adj.fields,
   };
 
   if (input.kind === "cotizacion") {
@@ -185,6 +213,8 @@ export async function convertQuote(
   if (quote.status !== "vigente") throw new HttpError(409, `Esta cotización ya está ${quote.status}.`);
 
   const expired = !!quote.validUntil && quote.validUntil.getTime() < Date.now();
+  const quoteAdj: AdjustOptions = { extra: quote.extraAmount, discountPct: quote.discountPct };
+  let adjFields = { extraAmount: quote.extraAmount ?? 0, discountPct: quote.discountPct ?? 0, discountAmount: quote.discountAmount ?? 0, shownSubtotal: quote.shownSubtotal ?? null };
   const items = expired
     ? await buildItems(
         quote.items.map((it) => ({
@@ -197,7 +227,12 @@ export async function convertQuote(
           heightM: it.heightM ?? undefined,
         })),
         (quote.customerType ?? "particular") as CustomerType,
-      )
+      ).then((built) => {
+        // Venció: precios actuales, pero se respetan el extra y el descuento que se le dieron.
+        const a = applyAdjust(built, quoteAdj);
+        adjFields = a.fields;
+        return a.lines;
+      })
     : (quote.toObject().items as { subtotal: number }[]);
 
   const customer = quote.customer ? await Customer.findById(quote.customer) : null;
@@ -221,6 +256,7 @@ export async function convertQuote(
       sellerName: user.name,
       fromQuote: quote._id,
       fromQuoteFolio: quote.folio,
+      ...adjFields,
       ...pay,
     });
     await Sale.updateOne({ _id: quote._id }, { convertedTo: sale._id, convertedToFolio: sale.folio });
@@ -249,19 +285,23 @@ export async function updateQuote(
     customerPhone: string;
     notes: string;
     customerId?: string | null;
+    extraAmount?: number | null;
+    discountPct?: number;
   },
 ) {
   if (!Types.ObjectId.isValid(quoteId)) throw new HttpError(404, "Cotización no encontrada.");
   const quote = await Sale.findById(quoteId);
   if (!quote || quote.kind !== "cotizacion") throw new HttpError(404, "Cotización no encontrada.");
   if (quote.status !== "vigente") throw new HttpError(409, `Esta cotización ya está ${quote.status}; ya no se puede editar.`);
+  assertOneAdjust({ extra: input.extraAmount, discountPct: input.discountPct });
 
   const expired = !!quote.validUntil && quote.validUntil.getTime() < Date.now();
   const sameType = (quote.customerType ?? "particular") === input.customerType;
   let items = await buildItems(input.items, input.customerType);
   let kept = 0;
   if (!expired && sameType) {
-    const quoted = new Map(quote.items.map((it) => [lineSignature(String(it.product), it), it.unitPrice]));
+    // Precio cotizado de lista (antes del extra y del descuento, que se vuelven a aplicar abajo).
+    const quoted = new Map(quote.items.map((it) => [lineSignature(String(it.product), it), it.listUnitPrice ?? it.unitPrice]));
     items = items.map((it) => {
       const unit = quoted.get(lineSignature(String(it.product), it));
       if (unit === undefined) return it;
@@ -270,12 +310,15 @@ export async function updateQuote(
     });
   }
 
+  const adj = applyAdjust(items, { extra: input.extraAmount, discountPct: input.discountPct });
+  items = adj.lines;
   const method = input.paymentMethod ?? null;
   const totals = computeTotals(items, method, method === "terminal" ? input.commissionPct : 0);
   const customer = await resolveCustomer(input);
   const update: Record<string, unknown> = {
     customer: customer?._id ?? null,
     items,
+    ...adj.fields,
     ...totals,
     paymentMethod: method,
     customerType: input.customerType,

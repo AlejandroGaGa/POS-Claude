@@ -43,6 +43,9 @@ function n(v: string): number {
   return Number(v.replace(",", "."));
 }
 
+/** Teclas que meterían decimales o signos en una cantidad de piezas. */
+const NON_INTEGER_KEYS = new Set([".", ",", "e", "E", "-", "+"]);
+
 const cm = (m?: number) => (m ? String(Math.round(m * 1000) / 10) : "");
 const hasPrice = (p: ProductJSON) => availableModes(p as ProductPricing).length > 0;
 
@@ -119,6 +122,13 @@ export default function AddItemDialog({ variants, initial, customerType, onClose
     m2: "Número de piezas",
   };
   const decimalQty = mode === "kg" || mode === "metro";
+
+  // Si se cambia de kilos/metros a una forma por pieza, la cantidad se vuelve entera (2.5 kg → 3 piezas).
+  useEffect(() => {
+    if (decimalQty || qty === "") return;
+    const v = n(qty);
+    if (Number.isFinite(v) && !Number.isInteger(v)) setQty(String(Math.max(1, Math.round(v))));
+  }, [decimalQty, qty]);
   const minCm = Math.round((product?.minCutM || DEFAULT_MIN_CUT_M) * 100);
   const title = variants && variants.length > 1 ? variants[0].group || product?.name : product?.name;
   const choice = (selected: boolean) =>
@@ -245,11 +255,11 @@ export default function AddItemDialog({ variants, initial, customerType, onClose
             )}
 
             {mode && (
-              <Field label={qtyLabel[mode]} htmlFor="qty">
+              <Field label={qtyLabel[mode]} htmlFor="qty" hint={decimalQty ? "Puedes usar decimales, ej. 2.5" : "Solo números enteros"}>
                 <NumberField
                   aria-label={qtyLabel[mode]}
                   value={Number.isFinite(n(qty)) ? n(qty) : NaN}
-                  onChange={(v) => setQty(Number.isNaN(v) ? "" : String(v))}
+                  onChange={(v) => setQty(Number.isNaN(v) ? "" : String(decimalQty ? v : Math.max(1, Math.round(v))))}
                   minValue={decimalQty ? 0.001 : 1}
                   step={decimalQty ? 0.5 : 1}
                   formatOptions={{ maximumFractionDigits: decimalQty ? 3 : 0 }}
@@ -257,7 +267,19 @@ export default function AddItemDialog({ variants, initial, customerType, onClose
                 >
                   <NumberField.Group className="h-12 rounded-xl">
                     <NumberField.DecrementButton aria-label="Restar" className="w-12" />
-                    <NumberField.Input id="qty" className="text-center text-lg font-semibold" autoFocus={mode !== "tramo" && mode !== "m2" && variants.length === 1} />
+                    <NumberField.Input
+                      id="qty"
+                      inputMode={decimalQty ? "decimal" : "numeric"}
+                      onKeyDown={(e) => {
+                        // Piezas cerradas (pieza, tira, tramo, hoja, corte de vidrio): solo números enteros.
+                        if (!decimalQty && NON_INTEGER_KEYS.has(e.key)) e.preventDefault();
+                      }}
+                      onPaste={(e) => {
+                        if (!decimalQty && /[^\d\s]/.test(e.clipboardData.getData("text"))) e.preventDefault();
+                      }}
+                      className="text-center text-lg font-semibold"
+                      autoFocus={mode !== "tramo" && mode !== "m2" && variants.length === 1}
+                    />
                     <NumberField.IncrementButton aria-label="Sumar" className="w-12" />
                   </NumberField.Group>
                 </NumberField>

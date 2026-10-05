@@ -40,7 +40,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   const page = parsePage(sp.pagina);
   if (sp.q?.trim()) {
     const rx = new RegExp(sp.q.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-    filter.$or = [{ folio: rx }, { customerName: rx }, { customerPhone: rx }];
+    filter.$or = [{ folio: rx }, { fromQuoteFolio: rx }, { customerName: rx }, { customerPhone: rx }];
   }
 
   // Página de ventas (MongoDB skip/limit) + proyección ligera de todo el filtro para los totales.

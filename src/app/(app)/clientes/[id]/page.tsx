@@ -6,6 +6,7 @@ import { connectDB } from "@/lib/db";
 import { Customer } from "@/lib/models/Customer";
 import { BillingProfile } from "@/lib/models/BillingProfile";
 import { Sale } from "@/lib/models/Sale";
+import { Return } from "@/lib/models/Return";
 import { getSettings } from "@/lib/models/Settings";
 import { can } from "@/lib/roles";
 import { plain } from "@/lib/serialize";
@@ -18,6 +19,7 @@ import { BillingList, type BillingJSON } from "@/components/BillingForm";
 import type { CustomerJSON } from "@/components/CustomerForm";
 import PaymentDialog from "@/components/PaymentDialog";
 import Icon from "@/components/Icon";
+import ReturnsTable, { type ReturnRow } from "@/components/returns/ReturnsTable";
 
 export const metadata = { title: "Cliente" };
 
@@ -31,11 +33,12 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
   if (!customer) notFound();
 
   const saleFilter = { customer: customer._id };
-  const [list, billing, all, settings] = await Promise.all([
+  const [list, billing, all, settings, returns] = await Promise.all([
     paginate(Sale.find(saleFilter).sort({ createdAt: -1 }), Sale.countDocuments(saleFilter), page),
     BillingProfile.find({ customer: customer._id }).sort({ createdAt: 1 }).lean(),
     Sale.find({ ...saleFilter, kind: "venta", status: { $ne: "cancelada" } }).select("total balance folio").lean(),
     getSettings(),
+    Return.find({ customer: customer._id }).sort({ createdAt: -1 }).limit(10).lean(),
   ]);
   const bought = all.reduce((a, s) => a + s.total, 0);
   const owed = all.filter((s) => (s.balance ?? 0) > 0);
@@ -85,6 +88,19 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
                   </li>
                 ))}
               </ul>
+            </Section>
+          )}
+          {returns.length > 0 && (
+            <Section
+              title="Devoluciones y cambios"
+              description="Las 10 más recientes"
+              actions={
+                <Link href={`/devoluciones?q=${encodeURIComponent(customer.name)}`} className={btn("ghost", "min-h-10 px-3 text-sm")}>
+                  Ver todas
+                </Link>
+              }
+            >
+              <ReturnsTable rows={plain<ReturnRow[]>(returns)} />
             </Section>
           )}
           <Section title="Historial" description={`${list.total} venta(s) y cotización(es)`}>

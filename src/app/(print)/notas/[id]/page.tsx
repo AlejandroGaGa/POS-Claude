@@ -13,6 +13,8 @@ import Icon from "@/components/Icon";
 import WhatsAppSend, { PdfLink } from "@/components/WhatsAppSend";
 import PaymentDialog from "@/components/PaymentDialog";
 import { whatsappConfig } from "@/lib/whatsapp";
+import { RETURN_OUTCOME_LABELS, type ReturnOutcome } from "@/lib/returns";
+import { shownLine } from "@/lib/adjust";
 
 export const metadata = { title: "Nota" };
 
@@ -27,7 +29,8 @@ export default async function NotaPage({ params, searchParams }: { params: Promi
 
   const waText = [
     `${settings.businessName} — ${title} ${sale.folio}`,
-    ...sale.items.map((it) => `• ${it.name} (${it.detail}) ${formatNumber(it.qty)} × ${formatMoney(it.unitPrice)} = ${formatMoney(it.subtotal)}`),
+    ...sale.items.map((it) => `• ${it.name} (${it.detail}) ${formatNumber(it.qty)} × ${formatMoney(shownLine(it).unitPrice)} = ${formatMoney(shownLine(it).subtotal)}`),
+    (sale.discountAmount ?? 0) > 0 ? `Descuento especial ${formatNumber(sale.discountPct ?? 0, 2)}%: −${formatMoney(sale.discountAmount ?? 0)}` : "",
     sale.commissionAmount ? `Comisión terminal ${formatNumber(sale.commissionPct, 2)}%: ${formatMoney(sale.commissionAmount)}` : "",
     `Total: ${formatMoney(sale.total)}`,
     isQuote && sale.validUntil ? `Vigente hasta ${fmtDate(sale.validUntil, false)}` : "",
@@ -60,6 +63,11 @@ export default async function NotaPage({ params, searchParams }: { params: Promi
           <PdfLink id={String(sale._id)} />
           {sale.kind === "venta" && sale.status === "vigente" && (sale.balance ?? 0) > 0 && (
             <PaymentDialog saleId={String(sale._id)} folio={sale.folio} balance={sale.balance ?? 0} defaultPct={settings.defaultCommissionPct} label="Abonar" />
+          )}
+          {sale.kind === "venta" && sale.status === "vigente" && can(user.role, "returns:create") && (
+            <Link href={`/devoluciones/nueva?venta=${String(sale._id)}`} className={btn("secondary")}>
+              <Icon name="undo" className="size-4" /> Devolución / cambio
+            </Link>
           )}
           {sale.kind === "venta" && sale.status === "vigente" && can(user.role, "sales:cancel") && <CancelSale id={String(sale._id)} label="Cancelar venta" />}
           <PrintButton />
@@ -181,21 +189,43 @@ export default async function NotaPage({ params, searchParams }: { params: Promi
                   <span className="block text-muted">
                     {it.code} · {it.detail}
                   </span>
-                  <span className="block text-muted sm:hidden">P. unit. {formatMoney(it.unitPrice)}</span>
+                  <span className="block text-muted sm:hidden">P. unit. {formatMoney(shownLine(it).unitPrice)}</span>
                 </td>
-                <td className="py-2 pr-2 text-right tabular">{formatNumber(it.qty)}</td>
-                <td className="hidden py-2 pr-2 text-right tabular sm:table-cell">{formatMoney(it.unitPrice)}</td>
-                <td className="py-2 text-right font-semibold tabular">{formatMoney(it.subtotal)}</td>
+                <td className="py-2 pr-2 text-right tabular">
+                  {formatNumber(it.qty)}
+                  {(it.returnedQty ?? 0) > 0 && <span className="block text-xs text-bad">devolvió {formatNumber(it.returnedQty ?? 0)}</span>}
+                </td>
+                <td className="hidden py-2 pr-2 text-right tabular sm:table-cell">{formatMoney(shownLine(it).unitPrice)}</td>
+                <td className="py-2 text-right font-semibold tabular">{formatMoney(shownLine(it).subtotal)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
         <dl className="mt-4 ml-auto flex max-w-xs flex-col gap-1 tabular">
-          <div className="flex justify-between">
-            <dt>Subtotal</dt>
-            <dd>{formatMoney(sale.subtotal)}</dd>
-          </div>
+          {(sale.discountAmount ?? 0) > 0 ? (
+            <>
+              <div className="flex justify-between">
+                <dt>Subtotal</dt>
+                <dd>{formatMoney(sale.shownSubtotal ?? sale.subtotal + (sale.discountAmount ?? 0))}</dd>
+              </div>
+              <div className="flex justify-between font-semibold">
+                <dt>Descuento especial ({formatNumber(sale.discountPct ?? 0, 2)}%)</dt>
+                <dd>−{formatMoney(sale.discountAmount ?? 0)}</dd>
+              </div>
+              {sale.commissionAmount > 0 && (
+                <div className="flex justify-between">
+                  <dt>Subtotal con descuento</dt>
+                  <dd>{formatMoney(sale.subtotal)}</dd>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="flex justify-between">
+              <dt>Subtotal</dt>
+              <dd>{formatMoney(sale.subtotal)}</dd>
+            </div>
+          )}
           {sale.commissionAmount > 0 && (
             <div className="flex justify-between">
               <dt>{(sale.payments?.length ?? 0) > 1 || !sale.commissionPct ? "Comisiones de terminal" : `Comisión terminal (${formatNumber(sale.commissionPct, 2)}%)`}</dt>
@@ -246,6 +276,28 @@ export default async function NotaPage({ params, searchParams }: { params: Promi
             <p className="mt-2 flex justify-between text-base font-bold">
               <span>{(sale.balance ?? 0) > 0 ? "Saldo pendiente" : "Liquidada"}</span>
               <span className="tabular">{formatMoney(sale.balance ?? 0)}</span>
+            </p>
+          </div>
+        )}
+        {(sale.returns?.length ?? 0) > 0 && (
+          <div className="mt-4 border-t border-line pt-3 text-sm">
+            <p className="mb-1 font-semibold">Devoluciones y cambios</p>
+            <ul className="flex flex-col gap-1">
+              {sale.returns!.map((r) => (
+                <li key={String(r._id)} className="flex justify-between gap-3">
+                  <Link href={`/notas-devolucion/${String(r._id)}`} className="font-medium tabular hover:underline">
+                    {r.folio}
+                  </Link>
+                  <span className="text-muted">
+                    {fmtDate(r.at)}
+                    {r.outcome ? ` · ${RETURN_OUTCOME_LABELS[r.outcome as ReturnOutcome] ?? r.outcome}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1 flex justify-between font-semibold tabular">
+              <span>Devuelto (a precio pagado)</span>
+              <span>{formatMoney(sale.returnedTotal ?? 0)}</span>
             </p>
           </div>
         )}

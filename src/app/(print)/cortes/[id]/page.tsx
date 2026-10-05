@@ -66,6 +66,8 @@ export default async function CutPrint({ params, searchParams }: { params: Promi
           {row("Fondo inicial", c.openingFloat)}
           {row("Ventas en efectivo", c.cashSales, { sign: "+" })}
           {row("Abonos en efectivo", c.cashPayments, { sign: "+" })}
+          {(c.returnCharges ?? 0) > 0 && row("Diferencias de cambios", c.returnCharges ?? 0, { sign: "+" })}
+          {(c.refunds ?? 0) > 0 && row("Devoluciones en efectivo", c.refunds ?? 0, { sign: "−" })}
           {row("Entradas", c.entries, { sign: "+" })}
           {row("Salidas", c.exits, { sign: "−" })}
           {row("Efectivo esperado", c.expected, { strong: true })}

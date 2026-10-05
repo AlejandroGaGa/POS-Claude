@@ -153,6 +153,8 @@ export default function Shell({ user, nav, children }: { user: SessionUser; nav:
   const [open, setOpen] = useState(false);
   const bottom = nav.filter((n) => n.primary).slice(0, 5);
   const canSell = nav.some((n) => n.href === "/mostrador");
+  /** Pantallas que se ajustan al alto de la ventana (sin scroll de página). */
+  const fitScreen = pathname === "/mostrador";
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -218,9 +220,18 @@ export default function Shell({ user, nav, children }: { user: SessionUser; nav:
         </Drawer.Content>
       </Drawer.Backdrop>
 
-      <main className="flex min-h-[calc(100dvh-4rem)] min-w-0 flex-1 flex-col px-3 pt-1 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-5 lg:min-h-[calc(100dvh-1.5rem)] lg:px-5 lg:pt-0 lg:pb-3">
-        <div className="flex-1">{children}</div>
-        <AppFooter className="mx-auto mt-8 w-full max-w-[1400px]" />
+      <main
+        className={cx(
+          "flex min-w-0 flex-1 flex-col px-3 pt-1 sm:px-5 lg:px-5 lg:pt-0",
+          // El mostrador ocupa exactamente la pantalla: sin scroll de la ventana, cada panel se desplaza por dentro.
+          // overflow-clip (no hidden) para no volverse contenedor de scroll y no desfasar el encabezado sticky.
+          fitScreen
+            ? "h-[calc(100dvh-var(--app-top)-var(--app-bottom))] overflow-clip lg:h-[calc(100dvh-1.5rem)]"
+            : "min-h-[calc(100dvh-4rem)] pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:min-h-[calc(100dvh-1.5rem)] lg:pb-3",
+        )}
+      >
+        <div className={cx("flex-1", fitScreen && "min-h-0")}>{children}</div>
+        {!fitScreen && <AppFooter className="mx-auto mt-8 w-full max-w-[1400px]" />}
       </main>
 
       {/* Barra inferior en celular: lo que más se usa en mostrador a un toque */}

@@ -7,12 +7,9 @@ import {
   availableModes,
   computeTotals,
   CUSTOMER_LABELS,
-  CUSTOMER_TYPES,
   formatMoney,
   formatNumber,
   MAX_COMMISSION_PCT,
-  PAYMENT_LABELS,
-  PAYMENT_METHODS,
   priceLine,
   paymentLine,
   round2,
@@ -22,14 +19,18 @@ import {
 } from "@/lib/pricing";
 import { priceSummary } from "@/lib/productSummary";
 import type { ProductJSON } from "@/lib/types";
-import { Alert, Button, EmptyState, Field, Input, PageHeader, cx } from "../ui";
+import { Alert, Button, EmptyState, PageHeader, cx } from "../ui";
 import { Sk, SkProductCards } from "../Skeleton";
 import Link from "next/link";
-import CustomerPicker, { type PickedCustomer } from "../CustomerPicker";
+import type { PickedCustomer } from "../CustomerPicker";
 import { upsertLine } from "@/lib/cart";
 import CustomerForm from "../CustomerForm";
 import Icon, { type IconName } from "../Icon";
-import { SearchField } from "@heroui/react";
+import { Modal, SearchField } from "@heroui/react";
+import CheckoutDialog from "./CheckoutDialog";
+import CustomerDialog from "./CustomerDialog";
+import AdjustDialog from "./AdjustDialog";
+import { adjustLines } from "@/lib/adjust";
 import { AnimatePresence, motion } from "framer-motion";
 import { AnimatedNumber, BASE, FAST, PILL_SPRING, Stagger } from "../motion";
 
@@ -46,6 +47,7 @@ import AddItemDialog, { type CartLine } from "./AddItemDialog";
 const CART_KEY = "hp_cart_v2";
 const QUOTE_KEY = "hp_cart_quote_v1";
 const CUSTOMER_KEY = "hp_cart_customer_v1";
+const ADJUST_KEY = "hp_cart_adjust_v1";
 
 const COLOR_ORDER = ["Blanco", "Natural", "Negro", "Champagne", "Nogal", "Natural brillante", "Bronce brillante", "Nogal cerezo"];
 const colorRank = (c?: string) => {
@@ -66,6 +68,9 @@ function groupProducts(list: ProductJSON[]): ProductJSON[][] {
 }
 
 const hasPrice = (p: ProductJSON) => availableModes(p as ProductPricing).length > 0;
+
+/** Formas de venta por pieza entera: en el carrito se cambian con botones − / +. */
+const STEP_MODES = new Set(["pieza", "tira", "tramo", "hoja", "m2"]);
 
 function readCart(): CartLine[] {
   try {
@@ -89,13 +94,16 @@ export interface EditQuote {
   paymentMethod: PaymentMethod | null;
   commissionPct: number;
   lines: CartLine[];
+  /** Pesos de más repartidos (oculto) y descuento especial (%) de la cotización. */
+  extraAmount: number;
+  discountPct: number;
   /** Precio unitario cotizado por renglón (firma → precio); vacío si ya venció. */
   locked: Record<string, number>;
   /** Renglones cuyo producto ya no existe. */
   missing: number;
   customer: PickedCustomer | null;
 }
-type QuoteMeta = Omit<EditQuote, "lines" | "customerName" | "customerPhone" | "notes" | "paymentMethod" | "commissionPct" | "customer">;
+type QuoteMeta = Omit<EditQuote, "lines" | "customerName" | "customerPhone" | "notes" | "paymentMethod" | "commissionPct" | "customer" | "extraAmount" | "discountPct">;
 
 function readQuote(): QuoteMeta | null {
   try {
@@ -158,13 +166,22 @@ export default function Pos({
   const [tab, setTab] = useState<"productos" | "carrito">("productos");
   const searchRef = useRef<HTMLInputElement>(null);
   const [quote, setQuote] = useState<QuoteMeta | null>(null);
+  const [checkout, setCheckout] = useState(false);
+  const [custOpen, setCustOpen] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+  /** Ajustes de precio: pesos de más repartidos (no se imprimen) y descuento especial (%). */
+  const [extra, setExtra] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [adjOpen, setAdjOpen] = useState(false);
 
   // Carrito guardado en este navegador por si se recarga la página.
   // Si se abrió desde una cotización (?cotizacion=…), se carga esa cotización para editarla.
   useEffect(() => {
     if (editQuote) {
-      const { lines, customerName: n, customerPhone: ph, notes: nt, paymentMethod: pm, commissionPct: cp, customer: cu, ...meta } = editQuote;
+      const { lines, customerName: n, customerPhone: ph, notes: nt, paymentMethod: pm, commissionPct: cp, customer: cu, extraAmount: ea, discountPct: dp, ...meta } = editQuote;
       setCart(lines);
+      setExtra(ea || 0);
+      setDiscount(dp || 0);
       setCustomer(cu);
       setQuote(meta);
       setCustomerType(meta.customerType);
@@ -178,6 +195,13 @@ export default function Pos({
     } else {
       setCart(readCart());
       setQuote(readQuote());
+      try {
+        const a = JSON.parse(localStorage.getItem(ADJUST_KEY) || "null") as { extra?: number; discount?: number } | null;
+        if (a) {
+          setExtra(a.extra || 0);
+          setDiscount(a.discount || 0);
+        }
+      } catch {}
       let saved: PickedCustomer | null = null;
       try {
         saved = JSON.parse(localStorage.getItem(CUSTOMER_KEY) || "null");
@@ -202,10 +226,12 @@ export default function Pos({
       else localStorage.removeItem(QUOTE_KEY);
       if (customer) localStorage.setItem(CUSTOMER_KEY, JSON.stringify(customer));
       else localStorage.removeItem(CUSTOMER_KEY);
+      if (extra || discount) localStorage.setItem(ADJUST_KEY, JSON.stringify({ extra, discount }));
+      else localStorage.removeItem(ADJUST_KEY);
     } catch {
       /* sin almacenamiento disponible */
     }
-  }, [cart, quote, customer, hydrated]);
+  }, [cart, quote, customer, extra, discount, hydrated]);
 
   /** Respeta el precio cotizado si el renglón ya estaba en la cotización vigente (mismo producto, forma y medida). */
   const keepQuoted = useCallback(
@@ -293,13 +319,15 @@ export default function Pos({
   }
 
   const pctNum = Number(pct.replace(",", "."));
+  // Precios con el extra repartido y el descuento especial (lo mismo que recalcula el servidor).
+  const adjusted = useMemo(() => adjustLines(cart.map((l) => l.priced), { extra, discountPct: discount }), [cart, extra, discount]);
   const totals = useMemo(() => {
     try {
-      return computeTotals(cart.map((l) => l.priced), method, method === "terminal" ? pctNum : 0);
+      return computeTotals(adjusted.lines, method, method === "terminal" ? pctNum : 0);
     } catch {
       return null;
     }
-  }, [cart, method, pctNum]);
+  }, [adjusted, method, pctNum]);
   const cashNum = Number(cash.replace(",", "."));
   const canPartial = !!customer?.preferential;
   const isPartial = canPartial && partial;
@@ -349,6 +377,19 @@ export default function Pos({
     [keepQuoted, customerType, cart],
   );
 
+  /** Suma o resta una pieza desde el carrito (respeta el precio cotizado si aplica). */
+  function changeQty(l: CartLine, delta: number) {
+    const qty = l.input.qty + delta;
+    if (qty < 1) return;
+    try {
+      const input = { ...l.input, qty };
+      const next = keepQuoted({ ...l, input, priced: priceLine(l.product as ProductPricing, input, { customerType }) }, customerType);
+      setCart((c) => c.map((x) => (x.key === l.key ? next : x)));
+    } catch {
+      /* cantidad inválida: se deja igual */
+    }
+  }
+
   function resetSale() {
     setQuote(null);
     setCart([]);
@@ -362,6 +403,8 @@ export default function Pos({
     setPartial(false);
     setPayNow("");
     setNotes("");
+    setExtra(0);
+    setDiscount(0);
   }
 
   async function save(kind: "venta" | "cotizacion") {
@@ -394,6 +437,8 @@ export default function Pos({
           customerId: customer?._id ?? null,
           payNow: kind === "venta" && isPartial ? payNowNum : null,
           notes,
+          extraAmount: extra || null,
+          discountPct: discount,
         }),
       });
       const data = await res.json();
@@ -422,6 +467,8 @@ export default function Pos({
           customerPhone,
           customerId: customer?._id ?? null,
           notes,
+          extraAmount: extra || null,
+          discountPct: discount,
         }),
       });
       const data = await res.json();
@@ -461,10 +508,10 @@ export default function Pos({
   const count = cart.length;
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4">
+    <div className="mx-auto flex h-[calc(100dvh-var(--app-top)-var(--app-bottom)-0.25rem)] w-full max-w-[1400px] flex-col gap-2 lg:h-[calc(100dvh-1.5rem)] lg:gap-3">
         <PageHeader
-          title={quote ? `Editando ${quote.folio}` : "Mostrador"}
-          subtitle={quote ? "Agrega o quita productos y guarda los cambios en la misma cotización." : "Busca o elige una categoría, toca el producto y captura la medida."}
+          title={<span className="max-lg:sr-only">{quote ? `Editando ${quote.folio}` : "Mostrador"}</span>}
+          subtitle={<span className="max-lg:hidden">{quote ? "Agrega o quita productos y guarda los cambios en la misma cotización." : "Busca o elige una categoría, toca el producto y captura la medida."}</span>}
         >
           {/* Pestañas en celular */}
           <div role="tablist" aria-label="Vista" className="grid w-full grid-cols-2 gap-1 rounded-full bg-surface p-1 shadow-[var(--surface-shadow)] lg:hidden">
@@ -483,10 +530,13 @@ export default function Pos({
           </div>
         </PageHeader>
 
-      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-5">
+      <div className="flex min-h-0 flex-1 flex-col pb-2 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-5 lg:pb-0 xl:grid-cols-[minmax(0,1fr)_460px]">
       {/* Buscador y resultados */}
-      <section aria-label="Productos" className={cx("flex min-w-0 flex-col gap-4", tab !== "productos" && "hidden lg:flex", count > 0 && "pb-20 lg:pb-0")}>
-        <div className="sticky top-[var(--sticky-top)] z-10 -mx-3 -mt-2 flex flex-col gap-3 bg-background/85 px-3 pt-2 pb-3 backdrop-blur-md sm:mx-0 sm:px-0">
+      <section
+        aria-label="Productos"
+        className={cx("flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-1 pb-4 lg:h-full", tab !== "productos" && "hidden lg:flex", count > 0 && "pb-24 lg:pb-4")}
+      >
+        <div className="sticky top-0 z-10 flex flex-col gap-3 bg-background/90 pt-1 pb-3 backdrop-blur-md">
         <SearchField aria-label="Buscar producto" value={q} onChange={setQ} className="w-full">
           <SearchField.Group className="h-14 rounded-2xl bg-surface shadow-[var(--surface-shadow)]">
             <SearchField.SearchIcon className="ml-1 size-5" />
@@ -495,7 +545,7 @@ export default function Pos({
           </SearchField.Group>
         </SearchField>
 
-        <div role="group" aria-label="Categorías" className="no-scrollbar -mx-3 flex gap-2 overflow-x-auto px-3 sm:mx-0 sm:px-0">
+        <div role="group" aria-label="Categorías" className="no-scrollbar flex gap-2 overflow-x-auto p-0.5">
           {[{ name: "", count: 0 }, ...categories].map((c) => {
             const active = category === c.name;
             return (
@@ -609,11 +659,11 @@ export default function Pos({
         )}
       </section>
 
-      {/* Carrito y cobro */}
+      {/* Carrito: corto y con botones grandes. Cliente y cobro van en ventanas aparte. */}
       <section
-        aria-label="Carrito"
+        aria-label="Venta actual"
         className={cx(
-          "flex min-w-0 flex-col gap-4 rounded-3xl bg-surface p-4 shadow-[var(--surface-shadow)] lg:p-5 lg:sticky lg:top-[calc(var(--sticky-top)+0.25rem)] lg:max-h-[calc(100dvh-var(--sticky-top)-1rem)] lg:overflow-y-auto",
+          "flex min-h-0 min-w-0 flex-1 flex-col gap-3 rounded-3xl bg-surface p-4 shadow-[var(--surface-shadow)] lg:h-full lg:p-5",
           tab !== "carrito" && "hidden lg:flex",
         )}
       >
@@ -621,254 +671,304 @@ export default function Pos({
           {bumpMsg}
         </p>
         <div className="flex items-center justify-between gap-2">
-          <h2 className="font-display text-xl sm:text-2xl">{quote ? `Cotización ${quote.folio}` : "Venta actual"}</h2>
+          <h2 className="font-display text-xl lg:text-2xl">
+            {quote ? `Cotización ${quote.folio}` : "Venta actual"}
+            {count > 0 && <span className="ml-2 text-lg text-muted">({count})</span>}
+          </h2>
           {count > 0 && !quote && (
-            <button onClick={() => setCart([])} className="min-h-10 rounded-full px-4 text-sm font-medium text-danger hover:bg-danger-soft">
-              Vaciar
+            <button
+              type="button"
+              onClick={() => setConfirmClear(true)}
+              className="flex min-h-11 items-center gap-1.5 rounded-xl px-3 text-base font-semibold text-danger hover:bg-danger-soft focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              <Icon name="trash" className="size-5" /> Vaciar
             </button>
           )}
         </div>
 
         {quote && (
-          <div className="flex flex-col gap-2 rounded-2xl bg-accent-soft p-3.5 text-sm text-accent-soft-foreground">
+          <div className="flex flex-col gap-2 rounded-2xl bg-accent-soft p-3.5 text-base text-accent-soft-foreground">
             <p>
               {quote.expired
-                ? "Esta cotización ya venció: al guardar se recalcula con precios actuales y se renueva la vigencia."
-                : "Los productos que ya estaban conservan su precio cotizado; los nuevos llevan el precio actual."}
+                ? "Esta cotización ya venció: al guardar se recalcula con precios actuales."
+                : "Lo que ya estaba conserva su precio cotizado; lo nuevo lleva precio actual."}
             </p>
-            {quote.missing > 0 && <p className="font-medium">{quote.missing} producto(s) ya no existen y se quitaron.</p>}
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/cotizaciones/${quote.id}`} className="font-semibold underline-offset-4 hover:underline">
+            {quote.missing > 0 && <p className="font-semibold">{quote.missing} producto(s) ya no existen y se quitaron.</p>}
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link href={`/cotizaciones/${quote.id}`} className="min-h-11 content-center font-semibold underline underline-offset-4">
                 Ver cotización
               </Link>
-              <span aria-hidden>·</span>
-              <button type="button" onClick={discardQuote} className="font-semibold underline-offset-4 hover:underline">
+              <button type="button" onClick={discardQuote} className="min-h-11 font-semibold underline underline-offset-4">
                 Descartar cambios
               </button>
             </div>
           </div>
         )}
 
-        {count === 0 ? (
-          <div className="flex flex-col items-center gap-2 rounded-2xl bg-surface-secondary p-6 text-center">
-            <span className="flex size-12 items-center justify-center rounded-full bg-surface text-muted">
-              <Icon name="cart" />
-            </span>
-            <p className="font-medium">Aún no hay productos</p>
-            <p className="text-sm text-muted">Toca un producto de la lista para agregarlo.</p>
-          </div>
-        ) : (
-          <ul className="flex flex-col">
-            <AnimatePresence initial={false}>
-            {cart.map((l) => (
-              <motion.li
-                key={l.key}
-                layout
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, x: 24, transition: FAST }}
-                transition={BASE}
-                className="relative flex items-start gap-2 border-b border-separator py-3 last:border-b-0"
-              >
-                {bumped?.key === l.key && (
-                  <motion.span
-                    key={bumped.n}
-                    aria-hidden
-                    initial={{ opacity: 0.9 }}
-                    animate={{ opacity: 0 }}
-                    transition={{ duration: 1.1, ease: "easeOut" }}
-                    className="pointer-events-none absolute -inset-x-2 inset-y-0.5 rounded-xl bg-accent-soft"
-                  />
-                )}
-                <div className="relative min-w-0 flex-1">
-                  <p className="font-semibold leading-snug">{l.product.name}</p>
-                  <p className="text-sm text-muted">{l.priced.detail}</p>
-                  <p className="text-sm tabular">
-                    {formatNumber(l.priced.qty)} × {formatMoney(l.priced.unitPrice)}
-                  </p>
-                </div>
-                <p className="relative pt-0.5 font-semibold tabular">{formatMoney(l.priced.subtotal)}</p>
-                <div className="relative flex flex-col">
-                  <button
-                    aria-label={`Editar ${l.product.name}`}
-                    onClick={() => {
-                      setEditing(l);
-                      setDialogVariants(variantsOf(l.product));
-                    }}
-                    className="flex size-10 items-center justify-center rounded-full text-muted hover:bg-default hover:text-foreground"
-                  >
-                    <Icon name="edit" />
-                  </button>
-                  <button
-                    aria-label={`Quitar ${l.product.name}`}
-                    onClick={() => setCart((c) => c.filter((x) => x.key !== l.key))}
-                    className="flex size-10 items-center justify-center rounded-full text-danger hover:bg-danger-soft"
-                  >
-                    <Icon name="trash" />
-                  </button>
-                </div>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-          </ul>
-        )}
-
-        <div className="flex flex-col gap-3 rounded-2xl bg-surface-secondary p-3.5">
-          <div className="flex items-center justify-between">
-            <label htmlFor="c-pick" className="font-medium">
-              Cliente
-            </label>
-            <span className="text-sm text-muted">{customer?.preferential ? "Preferencial" : "Opcional"}</span>
-          </div>
-          <CustomerPicker id="c-pick" value={customer} onPick={pickCustomer} onCreate={(n) => setNewCustomerName(n)} />
-          <details className="group">
-            <summary className="cursor-pointer list-none text-sm font-medium text-accent outline-none focus-visible:underline">
-              <span className="group-open:hidden">+ Notas de la venta{notes ? ` (${notes.slice(0, 24)}…)` : ""}</span>
-              <span className="hidden group-open:inline">Notas de la venta</span>
-            </summary>
-            <div className="mt-2">
-              <Input id="c-notes" aria-label="Notas de la venta" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="ej. entrega a domicilio" />
+        {/* Productos: esta es la única parte que se desplaza */}
+        <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+          {count === 0 ? (
+            <div className="flex h-full min-h-40 flex-col items-center justify-center gap-2 rounded-2xl bg-surface-secondary p-6 text-center">
+              <span className="flex size-14 items-center justify-center rounded-full bg-surface text-muted">
+                <Icon name="cart" className="size-7" />
+              </span>
+              <p className="text-lg font-semibold">Aún no hay productos</p>
+              <p className="text-base text-muted">Busca un producto y tócalo para agregarlo.</p>
+              <Button type="button" variant="secondary" onClick={() => { setTab("productos"); searchRef.current?.focus(); }} className="mt-1 min-h-12 text-base lg:hidden">
+                <Icon name="search" className="size-5" /> Buscar productos
+              </Button>
             </div>
-          </details>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              <AnimatePresence initial={false}>
+                {cart.map((l, i) => {
+                  const stepper = STEP_MODES.has(l.input.mode);
+                  const shown = adjusted.lines[i];
+                  return (
+                    <motion.li
+                      key={l.key}
+                      layout
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, x: 24, transition: FAST }}
+                      transition={BASE}
+                      className="relative flex flex-col gap-3 rounded-2xl border border-border p-3"
+                    >
+                      {bumped?.key === l.key && (
+                        <motion.span
+                          key={bumped.n}
+                          aria-hidden
+                          initial={{ opacity: 0.9 }}
+                          animate={{ opacity: 0 }}
+                          transition={{ duration: 1.1, ease: "easeOut" }}
+                          className="pointer-events-none absolute inset-0 rounded-2xl bg-accent-soft"
+                        />
+                      )}
+                      <div className="relative flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-lg leading-snug font-semibold">{l.product.name}</p>
+                          <p className="text-base text-muted">
+                            {l.priced.detail} · {formatMoney(shown?.shownUnitPrice ?? l.priced.unitPrice)} c/u
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-xl font-bold tabular">{formatMoney(shown?.shownSubtotal ?? l.priced.subtotal)}</p>
+                      </div>
+                      <div className="relative flex items-center gap-2">
+                        {stepper ? (
+                          <div className="flex items-center rounded-xl bg-default" role="group" aria-label={`Cantidad de ${l.product.name}`}>
+                            <button
+                              type="button"
+                              onClick={() => changeQty(l, -1)}
+                              disabled={l.input.qty <= 1}
+                              aria-label={`Quitar uno de ${l.product.name}`}
+                              className="flex size-12 items-center justify-center rounded-xl text-2xl font-bold hover:bg-default-hover focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-40 max-[380px]:size-11"
+                            >
+                              −
+                            </button>
+                            <span className="min-w-10 text-center text-xl font-bold tabular" aria-live="polite">
+                              {formatNumber(l.priced.qty)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => changeQty(l, 1)}
+                              aria-label={`Agregar uno de ${l.product.name}`}
+                              className="flex size-12 items-center justify-center rounded-xl text-2xl font-bold hover:bg-default-hover focus-visible:ring-2 focus-visible:ring-focus max-[380px]:size-11"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="min-h-12 content-center rounded-xl bg-default px-4 text-xl font-bold tabular">
+                            {formatNumber(l.priced.qty)} {l.input.mode === "kg" ? "kg" : "m"}
+                          </span>
+                        )}
+                        <div className="ml-auto flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(l);
+                              setDialogVariants(variantsOf(l.product));
+                            }}
+                            aria-label={`Cambiar ${l.product.name}`}
+                            className="flex min-h-12 min-w-16 flex-col items-center justify-center rounded-xl border border-border px-2 text-sm leading-tight font-semibold hover:bg-default focus-visible:ring-2 focus-visible:ring-focus min-[420px]:flex-row min-[420px]:gap-1.5 min-[420px]:text-base"
+                          >
+                            <Icon name="edit" className="size-5" /> Cambiar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setCart((c) => c.filter((x) => x.key !== l.key))}
+                            aria-label={`Quitar ${l.product.name}`}
+                            className="flex min-h-12 min-w-16 flex-col items-center justify-center rounded-xl border border-danger/40 px-2 text-sm leading-tight font-semibold text-danger hover:bg-danger-soft focus-visible:ring-2 focus-visible:ring-focus min-[420px]:flex-row min-[420px]:gap-1.5 min-[420px]:text-base"
+                          >
+                            <Icon name="trash" className="size-5" /> Quitar
+                          </button>
+                        </div>
+                      </div>
+                    </motion.li>
+                  );
+                })}
+              </AnimatePresence>
+            </ul>
+          )}
         </div>
 
-        <CustomerForm
-          open={newCustomerName !== null}
-          onOpenChange={(o) => !o && setNewCustomerName(null)}
-          canCredit={canCredit}
-          initialName={newCustomerName ?? ""}
-          onSaved={(c) => pickCustomer({ _id: c._id, name: c.name, phone: c.phone, customerType: c.customerType, preferential: c.preferential, creditLimit: c.creditLimit })}
-        />
-
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold text-muted">Tipo de cliente</legend>
-          <div className="grid grid-cols-2 gap-1 rounded-2xl bg-default p-1">
-            {CUSTOMER_TYPES.map((t) => (
-              <label
-                key={t}
-                className={cx(
-                  "relative flex min-h-11 cursor-pointer items-center justify-center rounded-xl px-1 text-center text-[15px] font-semibold transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus",
-                  customerType === t ? "text-foreground" : "text-muted hover:text-foreground",
-                )}
-              >
-                {customerType === t && <motion.span layoutId="pos-ctype" transition={PILL_SPRING} className="absolute inset-0 rounded-xl bg-surface shadow-sm" />}
-                <input type="radio" name="ctype" value={t} checked={customerType === t} onChange={() => changeCustomerType(t)} className="sr-only" />
-                <span className="relative">{CUSTOMER_LABELS[t]}</span>
-              </label>
-            ))}
-          </div>
-          <p className="mt-1 text-sm text-muted">Cambia el precio por m² del vidrio.</p>
-        </fieldset>
-
-        <fieldset>
-          <legend className="mb-2 text-sm font-semibold text-muted">Método de pago</legend>
-          <div className="grid grid-cols-3 gap-2">
-            {PAYMENT_METHODS.map((m) => (
-              <label
-                key={m}
-                className={cx(
-                  "relative flex min-h-16 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border px-1 text-center text-sm font-semibold transition-[color,transform] duration-150 active:scale-[0.97] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus [&>*:not(input)]:relative",
-                  method === m ? "border-accent text-accent-foreground" : "border-border hover:bg-surface-secondary",
-                )}
-              >
-                <input type="radio" name="method" value={m} checked={method === m} onChange={() => setMethod(m)} className="sr-only" />
-                {method === m && <motion.i layoutId="pos-pay" transition={PILL_SPRING} className="absolute -inset-px !absolute rounded-2xl bg-accent" />}
-                <Icon name={m === "efectivo" ? "wallet" : m === "terminal" ? "card" : "cash"} className="size-5" />
-                <span>{m === "terminal" ? "Terminal" : PAYMENT_LABELS[m]}</span>
-              </label>
-            ))}
-          </div>
-        </fieldset>
-
-        {method === "terminal" && (
-          <div className="rounded-2xl bg-warning-soft p-4 text-warning-soft-foreground">
-            <Field label="Comisión por terminal (%)" htmlFor="pct">
-              <Input id="pct" inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value)} className="text-lg font-semibold" />
-            </Field>
-            <p className="mt-2 text-sm">Avísale al cliente que el pago con tarjeta lleva esta comisión sobre el total.</p>
-          </div>
-        )}
-
-        {canPartial && (
-          <div className="flex flex-col gap-3 rounded-2xl bg-accent-soft/60 p-3.5">
-            <label className="flex cursor-pointer items-center justify-between gap-3">
-              <span className="text-sm">
-                <span className="block font-semibold">Pago parcial</span>
-                <span className="text-muted">Cliente preferencial: puede dejar saldo{customer?.creditLimit ? ` (límite ${formatMoney(customer.creditLimit)})` : ""}.</span>
+        {/* Pie fijo: cliente, total y los dos botones */}
+        <div className="flex shrink-0 flex-col gap-3 border-t border-separator pt-3">
+          <button
+            type="button"
+            onClick={() => setCustOpen(true)}
+            className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-surface-secondary px-4 py-1.5 text-left hover:bg-default focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            <Icon name="person" className="size-6 shrink-0 text-muted" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-lg font-semibold">{customer?.name || "Cliente: Mostrador"}</span>
+              <span className="block truncate text-base text-muted">
+                {[CUSTOMER_LABELS[customerType], customer?.preferential ? "Preferencial" : "", notes ? `Nota: ${notes}` : ""].filter(Boolean).join(" · ")}
               </span>
-              <input type="checkbox" checked={partial} onChange={(e) => setPartial(e.target.checked)} className="size-5 shrink-0 accent-[var(--accent)]" />
-            </label>
-            {partial && (
-              <Field label="Paga hoy" htmlFor="paynow" hint={`Queda a deber ${formatMoney(balanceLeft)} · 0 = todo a crédito`}>
-                <Input id="paynow" inputMode="decimal" value={payNow} onChange={(e) => setPayNow(e.target.value)} placeholder="0.00" className="text-lg font-semibold" />
-              </Field>
+            </span>
+            <span className="shrink-0 text-base font-semibold text-accent">{customer ? "Cambiar" : "Agregar"}</span>
+          </button>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setAdjOpen(true)}
+              disabled={!count}
+              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border px-3 text-base font-semibold hover:bg-default focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50"
+            >
+              <Icon name="calculator" className="size-5" /> Ajustar precio
+            </button>
+            {adjusted.extra > 0 && <span className="rounded-full bg-default px-3 py-1 text-sm font-medium tabular">Ajuste +{formatMoney(adjusted.extra)}</span>}
+            {adjusted.discountAmount > 0 && (
+              <span className="rounded-full bg-success-soft px-3 py-1 text-sm font-semibold text-success-soft-foreground tabular">
+                Descuento {formatNumber(adjusted.discountPct, 2)}% −{formatMoney(adjusted.discountAmount)}
+              </span>
             )}
           </div>
-        )}
 
-        {method === "efectivo" && (
-          <Field label="Efectivo recibido (opcional)" htmlFor="cash">
-            <Input id="cash" inputMode="decimal" value={cash} onChange={(e) => setCash(e.target.value)} placeholder="0.00" />
-          </Field>
-        )}
-
-        <div className="flex flex-col gap-3 max-lg:sticky max-lg:bottom-[calc(4rem+env(safe-area-inset-bottom))] max-lg:-mx-4 max-lg:-mb-4 max-lg:rounded-b-3xl max-lg:bg-surface max-lg:px-4 max-lg:pb-4 max-lg:shadow-[0_-8px_16px_-12px_rgb(0_0_0/0.15)]">
-        <dl className="flex flex-col gap-1.5 border-t border-dashed border-separator pt-4 tabular" aria-live="polite">
-          <div className="flex justify-between text-muted">
-            <dt>Subtotal</dt>
-            <dd>{formatMoney(totals?.subtotal ?? 0)}</dd>
+          <div className="flex items-baseline justify-between" aria-live="polite">
+            <span className="text-xl font-semibold">Total</span>
+            <span className="font-display text-3xl tabular sm:text-4xl">
+              <AnimatedNumber value={totals?.subtotal ?? 0} />
+            </span>
           </div>
-          {method === "terminal" && !isPartial && (
-            <div className="flex justify-between">
-              <dt>Comisión terminal ({totals ? formatNumber(totals.commissionPct, 2) : "—"}%)</dt>
-              <dd>{totals ? formatMoney(totals.commissionAmount) : "—"}</dd>
-            </div>
-          )}
-          {isPartial ? (
-            <>
-              {method === "terminal" && nowLine && nowLine.commissionAmount > 0 && (
-                <div className="flex justify-between">
-                  <dt>Comisión sobre el pago</dt>
-                  <dd>{formatMoney(nowLine.commissionAmount)}</dd>
-                </div>
-              )}
-              <div className="flex justify-between text-warn">
-                <dt>Queda a deber</dt>
-                <dd>{formatMoney(balanceLeft)}</dd>
-              </div>
-              <div className="flex items-baseline justify-between pt-1">
-                <dt className="text-lg font-semibold">Paga hoy</dt>
-                <dd className="font-display text-3xl">
-                  <AnimatedNumber value={dueNow} />
-                </dd>
-              </div>
-            </>
-          ) : (
-            <div className="flex items-baseline justify-between pt-1">
-              <dt className="text-lg font-semibold">Total</dt>
-              <dd className="font-display text-3xl">{totals ? <AnimatedNumber value={totals.total} /> : "—"}</dd>
-            </div>
-          )}
-          {changeDue !== null && Number.isFinite(changeDue) && (
-            <div className={cx("flex justify-between font-semibold", changeDue < 0 ? "text-bad" : "text-ok")}>
-              <dt>{changeDue < 0 ? "Falta" : "Cambio"}</dt>
-              <dd>{formatMoney(Math.abs(changeDue))}</dd>
-            </div>
-          )}
-        </dl>
 
-        {error && <Alert>{error}</Alert>}
+          {error && !checkout && <Alert>{error}</Alert>}
 
-        <div className="flex flex-col-reverse gap-2 sm:flex-row">
-          <Button variant="secondary" onClick={() => save("cotizacion")} loading={saving === "cotizacion"} disabled={!!saving || !count} className="flex-1">
-            {quote ? "Guardar cambios" : "Guardar cotización"}
-          </Button>
-          <Button onClick={() => save("venta")} loading={saving === "venta"} disabled={!!saving || !count} className="min-h-12 flex-1 text-base">
-            {quote ? "Cobrar cotización" : "Cobrar venta"}
-          </Button>
-        </div>
+          <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => save("cotizacion")}
+              loading={saving === "cotizacion"}
+              disabled={!!saving || !count}
+              className="min-h-16 !text-lg"
+            >
+              <Icon name="doc" className="size-5" /> {quote ? "Guardar cambios" : "Cotizar"}
+            </Button>
+            <Button
+              onClick={() => {
+                setError("");
+                setCheckout(true);
+              }}
+              disabled={!!saving || !count}
+              className="min-h-16 !text-xl"
+            >
+              <Icon name="coin" className="size-6" /> Cobrar
+            </Button>
+          </div>
         </div>
       </section>
+
+      <CheckoutDialog
+        open={checkout}
+        onClose={() => setCheckout(false)}
+        isQuote={!!quote}
+        totals={totals}
+        method={method}
+        setMethod={setMethod}
+        pct={pct}
+        setPct={setPct}
+        cash={cash}
+        setCash={setCash}
+        canPartial={canPartial}
+        creditLimit={customer?.creditLimit}
+        partial={partial}
+        setPartial={setPartial}
+        payNow={payNow}
+        setPayNow={setPayNow}
+        balanceLeft={balanceLeft}
+        dueNow={dueNow}
+        commissionNow={isPartial ? (nowLine?.commissionAmount ?? 0) : (totals?.commissionAmount ?? 0)}
+        changeDue={changeDue}
+        error={error}
+        saving={saving === "venta"}
+        onConfirm={() => save("venta")}
+      />
+
+      <AdjustDialog
+        open={adjOpen}
+        onClose={() => setAdjOpen(false)}
+        cart={cart}
+        extra={extra}
+        discount={discount}
+        onApply={(e, d) => {
+          setExtra(e);
+          setDiscount(d);
+        }}
+      />
+
+      <CustomerDialog
+        open={custOpen}
+        onClose={() => setCustOpen(false)}
+        customer={customer}
+        onPick={pickCustomer}
+        onMoreData={(n) => {
+          setCustOpen(false);
+          setNewCustomerName(n);
+        }}
+        customerType={customerType}
+        onType={changeCustomerType}
+        notes={notes}
+        setNotes={setNotes}
+      />
+
+      <CustomerForm
+        open={newCustomerName !== null}
+        onOpenChange={(o) => !o && setNewCustomerName(null)}
+        canCredit={canCredit}
+        initialName={newCustomerName ?? ""}
+        onSaved={(c) => pickCustomer({ _id: c._id, name: c.name, phone: c.phone, customerType: c.customerType, preferential: c.preferential, creditLimit: c.creditLimit })}
+      />
+
+      <Modal.Backdrop isOpen={confirmClear} onOpenChange={setConfirmClear}>
+        <Modal.Container placement="center">
+          <Modal.Dialog aria-labelledby="clear-title" className="w-full sm:max-w-sm">
+            <Modal.Header>
+              <Modal.Heading id="clear-title" className="text-xl">
+                ¿Vaciar la venta?
+              </Modal.Heading>
+            </Modal.Header>
+            <Modal.Body>
+              <p className="text-base">Se quitan los {count} producto(s) del carrito.</p>
+            </Modal.Body>
+            <Modal.Footer className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" onClick={() => setConfirmClear(false)} className="min-h-14 !text-lg">
+                No
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setCart([]);
+                  setConfirmClear(false);
+                }}
+                className="min-h-14 !text-lg"
+              >
+                Sí, vaciar
+              </Button>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
 
       {/* Barra inferior móvil con el total */}
       <AnimatePresence>

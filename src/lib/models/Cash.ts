@@ -32,6 +32,8 @@ const CashCutSchema = new Schema(
     openingFloat: { type: Number, default: 0 }, // fondo con el que inició
     cashSales: { type: Number, default: 0 }, // ventas pagadas en efectivo
     cashPayments: { type: Number, default: 0 }, // abonos en efectivo
+    returnCharges: { type: Number, default: 0 }, // diferencias de cambios cobradas en efectivo
+    refunds: { type: Number, default: 0 }, // efectivo regresado por devoluciones
     entries: { type: Number, default: 0 }, // entradas manuales a la caja
     exits: { type: Number, default: 0 }, // salidas manuales de la caja
     expected: { type: Number, default: 0 },

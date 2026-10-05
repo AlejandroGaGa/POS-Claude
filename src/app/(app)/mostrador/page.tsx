@@ -7,7 +7,7 @@ import { Customer } from "@/lib/models/Customer";
 import { can } from "@/lib/roles";
 import { getSettings } from "@/lib/models/Settings";
 import { plain } from "@/lib/serialize";
-import { lineSignature, type LineInput, type PaymentMethod, type CustomerType } from "@/lib/pricing";
+import { lineSignature, round2, type LineInput, type PaymentMethod, type CustomerType } from "@/lib/pricing";
 import type { ProductJSON } from "@/lib/types";
 import Pos, { type CategoryInfo, type EditQuote } from "@/components/pos/Pos";
 import type { PickedCustomer } from "@/components/CustomerPicker";
@@ -41,8 +41,10 @@ async function loadQuoteForEdit(id: string): Promise<EditQuote | null> {
       ...(it.heightM != null ? { heightM: it.heightM } : {}),
     };
     const input: LineInput = { mode: it.mode, qty: it.qty, ...dims };
-    if (!expired) locked[lineSignature(product._id, input)] = it.unitPrice;
-    return [{ key: `${id}-${i}`, product, input, priced: { mode: it.mode, qty: it.qty, ...dims, unitPrice: it.unitPrice, subtotal: it.subtotal, detail: it.detail ?? "" } }];
+    // En el carrito va el precio de lista cotizado; el extra y el descuento se vuelven a aplicar encima.
+    const unit = it.listUnitPrice ?? it.unitPrice;
+    if (!expired) locked[lineSignature(product._id, input)] = unit;
+    return [{ key: `${id}-${i}`, product, input, priced: { mode: it.mode, qty: it.qty, ...dims, unitPrice: unit, subtotal: round2(unit * it.qty), detail: it.detail ?? "" } }];
   });
   return {
     id,
@@ -58,6 +60,8 @@ async function loadQuoteForEdit(id: string): Promise<EditQuote | null> {
     lines,
     locked,
     missing: q.items.length - lines.length,
+    extraAmount: q.extraAmount ?? 0,
+    discountPct: q.discountPct ?? 0,
     customer: await loadCustomer(q.customer),
   };
 }

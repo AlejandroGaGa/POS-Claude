@@ -84,9 +84,11 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             </span>
           </div>
           <dl className="flex flex-col gap-1.5">
-            <Line label="Fondo inicial" value={sum.openingFloat} />
+            <Line label={sum.lastCutFolio ? `Fondo que dejó el corte ${sum.lastCutFolio}` : "Fondo inicial"} value={sum.openingFloat} />
             <Line label="Ventas en efectivo" value={sum.cashSales} sign="+" />
             <Line label="Abonos en efectivo" value={sum.cashPayments} sign="+" />
+            {sum.returnCharges > 0 && <Line label="Diferencias de cambios" value={sum.returnCharges} sign="+" />}
+            {sum.refunds > 0 && <Line label="Devoluciones en efectivo" value={sum.refunds} sign="−" />}
             <Line label="Entradas" value={sum.entries} sign="+" />
             <Line label="Salidas" value={sum.exits} sign="−" />
           </dl>
@@ -124,7 +126,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             <Line label="Total cobrado" value={sum.byMethod.efectivo + sum.byMethod.transferencia + sum.byMethod.terminal} strong />
           </dl>
           <p className="text-sm text-muted">
-            {sum.salesCount} venta(s){sum.pendingCredit > 0 ? ` · ${formatMoney(sum.pendingCredit)} quedaron a crédito` : ""}
+            {sum.salesCount} venta(s){sum.returnsCount > 0 ? ` · ${sum.returnsCount} devolución(es)` : ""}{sum.pendingCredit > 0 ? ` · ${formatMoney(sum.pendingCredit)} quedaron a crédito` : ""}
           </p>
           {canCut && (
             <Link href="/caja/cortes" className="mt-auto text-sm font-medium text-accent hover:underline">

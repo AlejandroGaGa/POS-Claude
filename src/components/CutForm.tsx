@@ -12,7 +12,8 @@ export default function CutForm({ expected }: { expected: number }) {
   const router = useRouter();
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [manual, setManual] = useState("");
-  const [withdrawn, setWithdrawn] = useState("");
+  /** Lo que se queda en caja para el siguiente periodo. Vacío = se entrega todo (fondo 0). */
+  const [keep, setKeep] = useState("");
   const [withdrawTo, setWithdrawTo] = useState<"fuera" | "chica">("fuera");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState("");
@@ -22,13 +23,14 @@ export default function CutForm({ expected }: { expected: number }) {
   const usingDenoms = DENOMS.some((d) => counts[d]);
   const counted = usingDenoms ? byDenoms : Number(manual.replace(",", ".")) || 0;
   const diff = round2(counted - expected);
-  const w = Number(withdrawn.replace(",", ".")) || 0;
-  const left = round2(counted - w);
+  const keepNum = Number(keep.replace(",", ".")) || 0;
+  const left = round2(Math.max(0, keepNum));
+  const w = round2(Math.max(0, counted - left));
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!usingDenoms && manual === "") return setError("Captura el efectivo contado.");
-    if (w > counted) return setError("No puedes retirar más de lo contado.");
+    if (left > counted + 0.005) return setError("El fondo que se queda no puede ser mayor a lo contado.");
     if (Math.abs(diff) >= 0.01 && !notes.trim() && !confirm(`Hay una diferencia de ${formatMoney(diff)}. ¿Guardar el corte así?`)) return;
     setBusy(true);
     setError("");
@@ -83,10 +85,10 @@ export default function CutForm({ expected }: { expected: number }) {
             </div>
           </dl>
           <FieldGrid cols={2}>
-            <Field label="Se retira" htmlFor="cut-w" hint={`Queda de fondo: ${formatMoney(Math.max(0, left))}`}>
-              <Input id="cut-w" inputMode="decimal" value={withdrawn} onChange={(e) => setWithdrawn(e.target.value)} placeholder="0.00" />
+            <Field label="¿Cuánto queda de fondo en caja?" htmlFor="cut-keep" hint={`Se entrega: ${formatMoney(w)}${left > 0 ? "" : " (todo lo contado)"}`}>
+              <Input id="cut-keep" inputMode="decimal" value={keep} onChange={(e) => setKeep(e.target.value)} placeholder="0.00" />
             </Field>
-            <Field label="El retiro va a" htmlFor="cut-to">
+            <Field label="Lo que se entrega va a" htmlFor="cut-to">
               <Select id="cut-to" value={withdrawTo} onChange={(e) => setWithdrawTo(e.target.value as "fuera" | "chica")}>
                 <option value="fuera">Fuera de caja (dueño / banco)</option>
                 <option value="chica">Caja chica</option>

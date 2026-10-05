@@ -17,6 +17,8 @@ const PERMISSIONS = {
   "sales:create": ["admin", "encargado", "vendedor"],
   "sales:viewAll": ["admin", "encargado"],
   "sales:cancel": ["admin"],
+  /** Registrar devoluciones y cambios (cobrar diferencia o regresar efectivo). */
+  "returns:create": ["admin", "encargado", "vendedor"],
   "products:view": ["admin", "encargado", "vendedor"],
   "products:edit": ["admin", "encargado"],
   "users:manage": ["admin"],

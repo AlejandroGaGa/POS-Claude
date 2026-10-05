@@ -20,6 +20,7 @@ import {
   FileDollar,
   Hourglass,
   ArrowRightArrowLeft,
+  ArrowRotateLeft,
   Calculator,
   Copy,
   CircleDollar,
@@ -90,6 +91,7 @@ const icons = {
   coin: CircleDollar,
   chat: CommentDot,
   download: ArrowDownToLine,
+  undo: ArrowRotateLeft,
 } satisfies Record<string, ComponentType<SVGProps<SVGSVGElement>>>;
 
 export type IconName = keyof typeof icons;

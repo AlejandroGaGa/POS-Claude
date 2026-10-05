@@ -1,5 +1,6 @@
 import "server-only";
 import { Sale } from "./models/Sale";
+import { Return } from "./models/Return";
 import { dayStr, range } from "./dates";
 
 type Agg = { total: number; count: number };
@@ -18,12 +19,13 @@ const sorted = (m: Map<string, Agg>) => [...m.entries()].map(([k, v]) => ({ _id:
  */
 export async function getStats(desde: string, hasta: string) {
   const createdAt = range(desde, hasta);
-  const [sales, quotes, cancelled] = await Promise.all([
+  const [sales, quotes, cancelled, returns] = await Promise.all([
     Sale.find({ kind: "venta", status: { $ne: "cancelada" }, createdAt })
       .select("createdAt total commissionAmount paymentMethod sellerName items.code items.name items.category items.subtotal")
       .lean(),
     Sale.find({ kind: "cotizacion", createdAt }).select("status").lean(),
     Sale.countDocuments({ kind: "venta", status: "cancelada", createdAt }),
+    Return.find({ createdAt }).select("returnedTotal refundAmount chargeAmount waivedAmount").lean(),
   ]);
 
   let total = 0;
@@ -71,6 +73,13 @@ export async function getStats(desde: string, hasta: string) {
       .slice(0, 10),
     byCategory: sorted(byCategory),
     quotes: { count: quoteCount, converted, pending, rate: quoteCount ? converted / quoteCount : 0 },
+    returns: {
+      count: returns.length,
+      returned: returns.reduce((a, r) => a + (r.returnedTotal ?? 0), 0),
+      refunded: returns.reduce((a, r) => a + (r.refundAmount ?? 0), 0),
+      charged: returns.reduce((a, r) => a + (r.chargeAmount ?? 0), 0),
+      waived: returns.reduce((a, r) => a + (r.waivedAmount ?? 0), 0),
+    },
   };
 }
 

@@ -34,6 +34,8 @@ export const POST = handle(async (req: Request) => {
     openingFloat: sum.openingFloat,
     cashSales: sum.cashSales,
     cashPayments: sum.cashPayments,
+    returnCharges: sum.returnCharges,
+    refunds: sum.refunds,
     entries: sum.entries,
     exits: sum.exits,
     expected: sum.expected,

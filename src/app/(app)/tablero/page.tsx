@@ -123,7 +123,7 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
         />
         </FadeUp>
         <FadeUp delay={0.04}>
-          <Stat label="Ventas" value={formatNumber(st.count)} num={{ value: st.count, money: false }} className="h-full" hint={st.cancelled ? `${st.cancelled} cancelada(s)` : "Sin cancelaciones"} />
+          <Stat label="Ventas" value={formatNumber(st.count)} num={{ value: st.count, money: false }} className="h-full" hint={[st.cancelled ? `${st.cancelled} cancelada(s)` : "Sin cancelaciones", st.returns.count ? `${st.returns.count} devolución(es): ${formatMoney(st.returns.refunded)} regresado` : ""].filter(Boolean).join(" · ")} />
         </FadeUp>
         <FadeUp delay={0.08}>
           <Stat label="Ticket promedio" value={formatMoney(st.avg)} num={{ value: st.avg }} className="h-full" />

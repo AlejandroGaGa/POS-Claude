@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { shownLine } from "./adjust";
 import { formatMoney, formatNumber, PAYMENT_LABELS, type PaymentMethod } from "./pricing";
 import { fmtDate } from "./labels";
 
@@ -20,8 +21,11 @@ export interface PdfSale {
   customerPhone?: string;
   customerType?: string;
   validUntil?: Date | string | null;
-  items: { code?: string; name: string; detail?: string; qty: number; unitPrice: number; subtotal: number }[];
+  items: { code?: string; name: string; detail?: string; qty: number; unitPrice: number; subtotal: number; shownUnitPrice?: number | null; shownSubtotal?: number | null }[];
   subtotal: number;
+  shownSubtotal?: number | null;
+  discountPct?: number | null;
+  discountAmount?: number | null;
   commissionPct?: number;
   commissionAmount?: number;
   total: number;
@@ -145,8 +149,8 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
     ensure(nameLines.length * 13 + detailLines.length * 11 + 10);
     y -= 2;
     right(formatNumber(it.qty), cQty, 10);
-    right(formatMoney(it.unitPrice), cUnit, 10);
-    right(formatMoney(it.subtotal), cAmt - 6, 10, bold);
+    right(formatMoney(shownLine(it).unitPrice), cUnit, 10);
+    right(formatMoney(shownLine(it).subtotal), cAmt - 6, 10, bold);
     nameLines.forEach((l, i) => {
       if (i) y -= 13;
       text(l, M + 6, 10, bold);
@@ -169,7 +173,11 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
     right(v, cAmt - 6, size, f);
     y -= size + 6;
   };
-  row("Subtotal", formatMoney(sale.subtotal));
+  if ((sale.discountAmount ?? 0) > 0) {
+    row("Subtotal", formatMoney(sale.shownSubtotal ?? sale.subtotal + (sale.discountAmount ?? 0)));
+    row(`Descuento especial (${formatNumber(sale.discountPct ?? 0, 2)}%)`, `-${formatMoney(sale.discountAmount ?? 0)}`, 10, bold);
+    if (sale.commissionAmount && sale.commissionAmount > 0) row("Subtotal con descuento", formatMoney(sale.subtotal));
+  } else row("Subtotal", formatMoney(sale.subtotal));
   if (sale.commissionAmount && sale.commissionAmount > 0) row(`Comisión terminal (${formatNumber(sale.commissionPct ?? 0, 2)}%)`, formatMoney(sale.commissionAmount));
   y += 4;
   page.drawLine({ start: { x: tx, y: y + 4 }, end: { x: W - M, y: y + 4 }, thickness: 0.8, color: line });

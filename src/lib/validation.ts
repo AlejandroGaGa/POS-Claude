@@ -2,6 +2,7 @@ import { z } from "zod";
 import { HttpError } from "./errors";
 import { CUSTOMER_TYPES, PAYMENT_METHODS, SALE_MODES, UNIT_TYPES } from "./pricing";
 import { ROLES } from "./roles";
+import { RETURN_MODES } from "./returns";
 
 /** Valida y lanza un 400 con el primer mensaje legible. */
 export function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
@@ -67,6 +68,10 @@ export const SaleInput = z.object({
   customerId: z.string().trim().max(40).nullable().optional(),
   /** Monto que paga hoy (cliente preferencial). Vacío = paga todo. */
   payNow: optNum.optional().default(null),
+  /** Pesos de más repartidos en los precios (no se imprime). */
+  extraAmount: optNum.optional().default(null),
+  /** Descuento especial en % (se imprime). */
+  discountPct: num.min(0).max(90, "El descuento no puede pasar de 90%").optional().default(0),
 });
 
 /** Edición de una cotización: lo mismo que una venta nueva, sin el tipo ni el efectivo. */
@@ -169,3 +174,29 @@ export const BulkAdjustInput = z.object({
   roundTo: num.min(0).max(100).default(0),
   apply: z.boolean().default(false),
 });
+
+/**
+ * Devolución o cambio. Con nota: `returned` dice qué renglones de la venta regresan y cuántos.
+ * Sin nota: `returnedLines` se capturan del catálogo (a precio actual). `newItems` es lo que se lleva.
+ */
+export const ReturnInput = z.object({
+  saleId: z.string().trim().max(40).nullable().optional(),
+  returned: z
+    .array(z.object({ index: z.coerce.number().int().min(0), qty: num.positive("La cantidad a devolver debe ser mayor a 0") }))
+    .max(200)
+    .optional()
+    .default([]),
+  returnedLines: z.array(LineInputSchema).max(200).optional().default([]),
+  newItems: z.array(LineInputSchema).max(200).optional().default([]),
+  mode: z.enum(RETURN_MODES),
+  paymentMethod: z.enum(PAYMENT_METHODS).nullable().optional(),
+  commissionPct: num.min(0).max(20).optional().default(0),
+  cashReceived: optNum.optional().default(null),
+  customerType: z.enum(CUSTOMER_TYPES).optional().default("particular"),
+  customerName: z.string().trim().max(120).optional().default(""),
+  customerPhone: z.string().trim().max(30).optional().default(""),
+  customerId: z.string().trim().max(40).nullable().optional(),
+  reason: z.string().trim().min(3, "Escribe el motivo de la devolución").max(200),
+  notes: z.string().trim().max(500).optional().default(""),
+});
+export type ReturnInputT = z.infer<typeof ReturnInput>;

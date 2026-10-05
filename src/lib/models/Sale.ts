@@ -16,6 +16,13 @@ const ItemSchema = new Schema(
     unitPrice: { type: Number, required: true },
     subtotal: { type: Number, required: true },
     detail: String,
+    /** Precio de lista al venderse (interno; nunca se imprime). Solo cuando hubo ajuste. */
+    listUnitPrice: Number,
+    /** Lo que se imprime en la nota: con el extra repartido y antes del descuento especial. */
+    shownUnitPrice: Number,
+    shownSubtotal: Number,
+    /** Cantidad que ya se devolvió de este renglón (devoluciones y cambios). */
+    returnedQty: { type: Number, default: 0 },
   },
   { _id: false },
 );
@@ -49,6 +56,12 @@ const SaleSchema = new Schema(
     notes: { type: String, trim: true, default: "" },
     items: { type: [ItemSchema], default: [] },
     subtotal: { type: Number, required: true },
+    // Ajustes de precio: extra repartido en los precios (oculto) y descuento especial (visible).
+    extraAmount: { type: Number, default: 0 },
+    discountPct: { type: Number, default: 0 },
+    discountAmount: { type: Number, default: 0 },
+    /** Suma de lo impreso antes del descuento (= subtotal si no hay descuento). */
+    shownSubtotal: { type: Number, default: null },
     paymentMethod: { type: String, enum: [...PAYMENT_METHODS, null], default: null },
     commissionPct: { type: Number, default: 0 },
     commissionAmount: { type: Number, default: 0 },
@@ -70,6 +83,9 @@ const SaleSchema = new Schema(
     cancelledAt: Date,
     cancelledByName: String,
     cancelReason: String,
+    // Devoluciones y cambios ligados a esta venta
+    returnedTotal: { type: Number, default: 0 }, // valor devuelto (a precio pagado)
+    returns: { type: [{ _id: { type: Schema.Types.ObjectId, ref: "Return" }, folio: String, at: Date, outcome: String }], default: undefined },
     // Última edición de la cotización
     editedAt: Date,
     editedByName: String,
@@ -82,6 +98,7 @@ const SaleSchema = new Schema(
 );
 
 SaleSchema.index({ kind: 1, createdAt: -1 });
+SaleSchema.index({ fromQuoteFolio: 1 });
 
 export type SaleDoc = InferSchemaType<typeof SaleSchema>;
 export const Sale: Model<SaleDoc> = models.Sale || model("Sale", SaleSchema);

@@ -5,6 +5,7 @@ import { connectDB } from "@/lib/db";
 import { getSettings } from "@/lib/models/Settings";
 import { loadSaleFor } from "@/lib/saleAccess";
 import { buildItems } from "@/lib/sales";
+import { adjustLines, shownLine } from "@/lib/adjust";
 import { can } from "@/lib/roles";
 import { formatMoney, formatNumber, round2, type CustomerType } from "@/lib/pricing";
 import { fmtDate } from "@/lib/labels";
@@ -41,7 +42,8 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
         })),
         (quote.customerType ?? "particular") as CustomerType,
       );
-      subtotal = round2(items.reduce((a, i) => a + i.subtotal, 0));
+      // Precios actuales, respetando el extra y el descuento que se le dieron.
+      subtotal = round2(adjustLines(items, { extra: quote.extraAmount, discountPct: quote.discountPct }).subtotal);
     } catch (e) {
       repriceError = (e as Error).message;
     }
@@ -84,15 +86,27 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
                 <div className="min-w-0">
                   <p className="font-medium">{it.name}</p>
                   <p className="text-sm text-muted">
-                    {it.code} · {it.detail} · {formatNumber(it.qty)} × {formatMoney(it.unitPrice)}
+                    {it.code} · {it.detail} · {formatNumber(it.qty)} × {formatMoney(shownLine(it).unitPrice)}
                   </p>
                 </div>
-                <p className="font-semibold whitespace-nowrap tabular">{formatMoney(it.subtotal)}</p>
+                <p className="font-semibold whitespace-nowrap tabular">{formatMoney(shownLine(it).subtotal)}</p>
               </li>
             ))}
           </ul>
+          {(quote.discountAmount ?? 0) > 0 && (
+            <>
+              <p className="mt-1 flex justify-between border-t border-separator pt-3 tabular">
+                <span>Subtotal</span>
+                <span>{formatMoney(quote.shownSubtotal ?? quote.subtotal + (quote.discountAmount ?? 0))}</span>
+              </p>
+              <p className="flex justify-between font-semibold text-ok tabular">
+                <span>Descuento especial {formatNumber(quote.discountPct ?? 0, 2)}%</span>
+                <span>−{formatMoney(quote.discountAmount ?? 0)}</span>
+              </p>
+            </>
+          )}
           <p className="mt-1 flex justify-between border-t border-separator pt-3 text-lg font-semibold tabular">
-            <span>Subtotal cotizado</span>
+            <span>{(quote.discountAmount ?? 0) > 0 ? "Total cotizado" : "Subtotal cotizado"}</span>
             <span>{formatMoney(quote.subtotal)}</span>
           </p>
         </Section>
