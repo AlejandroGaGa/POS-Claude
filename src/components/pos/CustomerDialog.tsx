@@ -157,7 +157,7 @@ export default function CustomerDialog({
                     <CustomerPicker id="cd-pick" value={null} onPick={onPick} onCreate={(n) => goNew(n)} placeholder="Nombre o teléfono…" autoFocus />
                     <p className="text-base text-muted">
                       ¿No aparece?{" "}
-                      <button type="button" onClick={() => goNew()} className="min-h-11 font-semibold text-accent underline underline-offset-4">
+                      <button type="button" onClick={() => goNew()} className="link-text min-h-11 font-semibold text-accent">
                         Regístralo aquí
                       </button>
                       . Si no anotas cliente, la venta queda como «Mostrador».
@@ -208,7 +208,7 @@ export default function CustomerDialog({
                     <Button type="submit" loading={saving} className="min-h-14 !text-lg">
                       <Icon name="personPlus" className="size-5" /> Guardar y usar en esta venta
                     </Button>
-                    <button type="button" onClick={() => onMoreData(name.trim())} className="min-h-11 self-start text-base font-semibold text-accent underline underline-offset-4">
+                    <button type="button" onClick={() => onMoreData(name.trim())} className="link-text min-h-11 self-start text-base font-semibold text-accent">
                       Agregar más datos (correo, dirección…)
                     </button>
                   </form>

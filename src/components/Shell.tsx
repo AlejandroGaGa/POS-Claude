@@ -248,8 +248,8 @@ export default function Shell({ user, nav, children }: { user: SessionUser; nav:
                   href={n.href}
                   aria-current={active ? "page" : undefined}
                   className={cx(
-                    "flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium outline-none focus-visible:bg-default",
-                    active ? "text-accent" : "text-muted",
+                    "flex h-16 flex-col items-center justify-center gap-1 text-xs font-medium outline-none transition-colors focus-visible:bg-default",
+                    active ? "text-accent" : "text-muted hover:text-foreground",
                   )}
                 >
                   <span className="relative flex h-7 w-12 items-center justify-center">

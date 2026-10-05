@@ -58,7 +58,7 @@ export default function ReturnsTable({ rows }: { rows: ReturnRow[] }) {
       <ul className="flex flex-col gap-2 md:hidden">
         {rows.map((r) => (
           <li key={r._id}>
-            <Link href={href(r)} className="flex flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)] outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]">
+            <Link href={href(r)} className="flex flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--overlay-shadow)] outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold tabular">
                   {r.folio}

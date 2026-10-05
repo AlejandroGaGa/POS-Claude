@@ -233,6 +233,48 @@ html[data-nav-pending] [data-results] {
   }
 }
 
+/*
+ * Todo lo que se puede tocar muestra la manita; lo deshabilitado muestra "no permitido".
+ * (Tailwind v4 deja los <button> con cursor normal; aquí se corrige para todo el sistema.)
+ */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="menuitem"],
+  [role="row"][data-href],
+  a[href],
+  summary,
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="file"]:not(:disabled),
+  label:has(> input[type="radio"]:not(:disabled)),
+  label:has(> input[type="checkbox"]:not(:disabled)) {
+    cursor: pointer;
+  }
+  button:disabled,
+  [aria-disabled="true"],
+  select:disabled,
+  input:disabled,
+  label:has(> input[type="radio"]:disabled),
+  label:has(> input[type="checkbox"]:disabled) {
+    cursor: not-allowed;
+  }
+}
+
+/* Enlaces de texto subrayados: al pasar el mouse el subrayado engruesa y el texto se aclara un poco. */
+.link-text {
+  text-decoration-line: underline;
+  text-underline-offset: 4px;
+  transition: opacity 150ms, text-decoration-thickness 150ms;
+}
+.link-text:hover {
+  opacity: 0.8;
+  text-decoration-thickness: 2px;
+}
+
 /* Impresión del ticket / nota */
 @media print {
   @page {

@@ -73,7 +73,7 @@ export default function ProductsTable({ rows, editor }: { rows: ProductRow[]; ed
           return (
             <Fragment key={p._id}>
               {editor ? (
-                <Link href={`/productos/${p._id}`} className={`${cls} outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]`}>
+                <Link href={`/productos/${p._id}`} className={`${cls} outline-none transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--overlay-shadow)] focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]`}>
                   {body}
                 </Link>
               ) : (

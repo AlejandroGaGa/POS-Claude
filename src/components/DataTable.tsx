@@ -85,7 +85,7 @@ export default function DataTable({
           return (
             <Fragment key={r.id}>
               {r.href ? (
-                <Link href={r.href} className={cx(cls, "outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]")}>
+                <Link href={r.href} className={cx(cls, "outline-none transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--overlay-shadow)] focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]")}>
                   {body}
                 </Link>
               ) : (

@@ -695,10 +695,10 @@ export default function Pos({
             </p>
             {quote.missing > 0 && <p className="font-semibold">{quote.missing} producto(s) ya no existen y se quitaron.</p>}
             <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <Link href={`/cotizaciones/${quote.id}`} className="min-h-11 content-center font-semibold underline underline-offset-4">
+              <Link href={`/cotizaciones/${quote.id}`} className="link-text min-h-11 content-center font-semibold">
                 Ver cotización
               </Link>
-              <button type="button" onClick={discardQuote} className="min-h-11 font-semibold underline underline-offset-4">
+              <button type="button" onClick={discardQuote} className="link-text min-h-11 font-semibold">
                 Descartar cambios
               </button>
             </div>

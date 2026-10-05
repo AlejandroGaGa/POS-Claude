@@ -86,7 +86,7 @@ export default function SalesTable({ rows, showSeller, quoteMode = false }: { ro
       <Stagger as="ul" className="flex flex-col gap-2 md:hidden" maxAnimated={10}>
         {rows.map((r) => (
           <Fragment key={r._id}>
-            <Link href={hrefOf(r)} className="flex flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)] outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]">
+            <Link href={hrefOf(r)} className="flex flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--overlay-shadow)] outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold tabular">{r.folio}</span>
                 <StatusChip r={r} now={now} />
