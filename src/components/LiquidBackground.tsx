@@ -4,12 +4,13 @@ import { useEffect, useRef } from "react";
 type RGBA = [number, number, number, number];
 type Blob = { color: RGBA; r: number; cx: number; cy: number; ax: number; ay: number; sx: number; sy: number; phase: number };
 
-// Manchas en tonos ciruela / magenta / índigo. Posiciones y radios relativos al lienzo.
+// Manchas en los tonos del logotipo: azul acero, azul cristal y pizarra. Posiciones y radios relativos al lienzo.
+// Las opacidades están medidas para que el texto blanco encima conserve contraste AA aun donde se enciman.
 const BLOBS: Blob[] = [
-  { color: [168, 52, 140, 0.55], r: 0.55, cx: 0.2, cy: 0.18, ax: 0.18, ay: 0.14, sx: 0.11, sy: 0.08, phase: 0 },
-  { color: [88, 44, 160, 0.6], r: 0.5, cx: 0.75, cy: 0.62, ax: 0.2, ay: 0.16, sx: 0.07, sy: 0.1, phase: 1.7 },
-  { color: [214, 96, 162, 0.38], r: 0.42, cx: 0.18, cy: 0.8, ax: 0.22, ay: 0.1, sx: 0.09, sy: 0.12, phase: 3.1 },
-  { color: [40, 30, 96, 0.7], r: 0.45, cx: 0.82, cy: 0.12, ax: 0.14, ay: 0.2, sx: 0.12, sy: 0.07, phase: 4.4 },
+  { color: [62, 100, 132, 0.5], r: 0.55, cx: 0.2, cy: 0.18, ax: 0.18, ay: 0.14, sx: 0.11, sy: 0.08, phase: 0 },
+  { color: [39, 81, 112, 0.6], r: 0.5, cx: 0.75, cy: 0.62, ax: 0.2, ay: 0.16, sx: 0.07, sy: 0.1, phase: 1.7 },
+  { color: [129, 160, 184, 0.22], r: 0.42, cx: 0.18, cy: 0.8, ax: 0.22, ay: 0.1, sx: 0.09, sy: 0.12, phase: 3.1 },
+  { color: [20, 27, 36, 0.7], r: 0.45, cx: 0.82, cy: 0.12, ax: 0.14, ay: 0.2, sx: 0.12, sy: 0.07, phase: 4.4 },
 ];
 
 /**
@@ -80,8 +81,8 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
       py += (ty - py) * 0.06;
 
       const bg = sctx.createLinearGradient(0, 0, W, H);
-      bg.addColorStop(0, "rgb(38, 22, 52)");
-      bg.addColorStop(1, "rgb(78, 34, 82)");
+      bg.addColorStop(0, "rgb(27, 34, 43)");
+      bg.addColorStop(1, "rgb(32, 70, 98)");
       sctx.fillStyle = bg;
       sctx.fillRect(0, 0, W, H);
 
@@ -93,7 +94,7 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
         const breathe = 1 + Math.sin(t * 0.35 + b.phase) * 0.08;
         drawBlob(x, y, b.r * m * breathe, b.color);
       }
-      drawBlob(px * W, py * H, 0.3 * m, [255, 190, 230, 0.18]);
+      drawBlob(px * W, py * H, 0.3 * m, [200, 225, 245, 0.12]);
       sctx.globalCompositeOperation = "source-over";
 
       if (!ripple || reduce) {
@@ -101,7 +102,7 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
       } else {
         // Ondulación tipo agua: desplaza filas y luego columnas con ondas que viajan.
         const amp = Math.max(1.5, W / 55);
-        ctx.fillStyle = "rgb(46, 26, 60)";
+        ctx.fillStyle = "rgb(29, 44, 58)";
         ctx.fillRect(0, 0, W, H);
         for (let y = 0; y < H; y++) {
           const dx = Math.sin(y * 0.18 + t * 1.1) * amp + Math.sin(y * 0.05 - t * 0.6) * amp * 1.4;

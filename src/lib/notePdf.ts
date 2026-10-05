@@ -2,6 +2,8 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf
 import { shownLine } from "./adjust";
 import { formatMoney, formatNumber, PAYMENT_LABELS, type PaymentMethod } from "./pricing";
 import { fmtDate } from "./labels";
+import { APP_NAME } from "./brand";
+import { LOGO_GLASS, LOGO_GLASS_FACET, LOGO_H, LOGO_INK } from "./logoPaths";
 
 export interface PdfBusiness {
   businessName: string;
@@ -68,14 +70,17 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
   const title = isQuote ? "Cotización" : "Nota de venta";
   doc.setTitle(`${title} ${sale.folio}`);
   doc.setAuthor(clean(biz.businessName));
-  doc.setCreator("Ventas Mostrador HPA");
+  doc.setCreator(APP_NAME);
 
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const ink = rgb(0.12, 0.1, 0.14);
-  const muted = rgb(0.42, 0.4, 0.45);
-  const line = rgb(0.85, 0.83, 0.86);
-  const accent = rgb(0.29, 0.16, 0.33);
+  // Colores del logotipo: tinta pizarra, gris medio y azul cristal.
+  const ink = rgb(0.12, 0.14, 0.17);
+  const muted = rgb(0.34, 0.37, 0.41);
+  const line = rgb(0.82, 0.85, 0.88);
+  const logoInk = rgb(0.18, 0.2, 0.227);
+  const glass = rgb(0.506, 0.627, 0.722);
+  const glassLight = rgb(0.553, 0.667, 0.753);
 
   const W = 612;
   const H = 792;
@@ -97,16 +102,20 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
     }
   };
 
-  // Encabezado
-  text(biz.businessName, M, 18, bold, accent);
+  // Encabezado: logotipo arriba a la izquierda; debajo, nombre y datos del negocio.
+  const LOGO_PT = 26;
+  const logo = { x: M, y: y + 12, scale: LOGO_PT / LOGO_H };
+  page.drawSvgPath(LOGO_INK, { ...logo, color: logoInk });
+  page.drawSvgPath(LOGO_GLASS, { ...logo, color: glass });
+  page.drawSvgPath(LOGO_GLASS_FACET, { ...logo, color: glassLight });
   right(title, W - M, 14, bold);
   y -= 18;
   right(sale.folio, W - M, 13, bold);
-  const leftInfo = [biz.address, biz.phone ? `Tel. ${biz.phone}` : "", biz.rfc ? `RFC ${biz.rfc}` : ""].filter(Boolean) as string[];
+  const leftInfo = [biz.businessName, biz.address, biz.phone ? `Tel. ${biz.phone}` : "", biz.rfc ? `RFC ${biz.rfc}` : ""].filter(Boolean) as string[];
   const rightInfo = [fmtDate(sale.createdAt), sale.status === "cancelada" ? "CANCELADA" : ""].filter(Boolean);
   for (let i = 0; i < Math.max(leftInfo.length, rightInfo.length); i++) {
-    if (i > 0 || leftInfo.length) y -= 14;
-    if (leftInfo[i]) text(leftInfo[i], M, 9.5, font, muted);
+    y -= 14;
+    if (leftInfo[i]) text(leftInfo[i], M, i === 0 ? 10.5 : 9.5, i === 0 ? bold : font, i === 0 ? ink : muted);
     if (rightInfo[i]) right(rightInfo[i], W - M, 9.5, rightInfo[i] === "CANCELADA" ? bold : font, rightInfo[i] === "CANCELADA" ? rgb(0.7, 0.1, 0.1) : muted);
   }
   y -= 14;
@@ -134,7 +143,7 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
   const cAmt = W - M;
   const nameMax = cQty - M - 50;
   function drawTableHeader() {
-    page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: rgb(0.95, 0.94, 0.95) });
+    page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: rgb(0.94, 0.95, 0.96) });
     text("Producto", M + 6, 9.5, bold);
     right("Cant.", cQty, 9.5, bold);
     right("P. unit.", cUnit, 9.5, bold);

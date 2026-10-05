@@ -11,6 +11,7 @@ import { RETURN_MODE_LABELS, RETURN_OUTCOME_LABELS, RETURN_OUTCOME_TONE, type Re
 import { Alert, Badge, btn } from "@/components/ui";
 import PrintButton from "@/components/PrintButton";
 import Icon from "@/components/Icon";
+import { SiacMark } from "@/components/Logo";
 
 export const metadata = { title: "Nota de devolución" };
 
@@ -107,7 +108,8 @@ export default async function NotaDevolucionPage({ params, searchParams }: { par
       <article className="print-area rounded-3xl bg-surface p-4 shadow-[var(--surface-shadow)] sm:p-6">
         <header className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
           <div className="min-w-0">
-            <p className="text-xl font-bold">{settings.businessName}</p>
+            <SiacMark title="SIAC" className="mb-2 h-9 w-auto text-[var(--brand-ink)]" />
+            <p className="text-base font-bold">{settings.businessName}</p>
             {settings.address && <p className="text-sm">{settings.address}</p>}
             {settings.phone && <p className="text-sm">Tel. {settings.phone}</p>}
           </div>

@@ -10,6 +10,7 @@ import { fmtDate } from "@/lib/labels";
 import { Alert, btn } from "@/components/ui";
 import PrintButton from "@/components/PrintButton";
 import Icon from "@/components/Icon";
+import { SiacMark } from "@/components/Logo";
 
 export const metadata = { title: "Corte de caja" };
 
@@ -51,7 +52,8 @@ export default async function CutPrint({ params, searchParams }: { params: Promi
       <article className="print-area flex flex-col gap-4 rounded-3xl bg-surface p-5 text-[15px] shadow-[var(--surface-shadow)] sm:p-6">
         <header className="flex items-start justify-between gap-3 border-b border-line pb-3">
           <div>
-            <p className="text-lg font-bold">{settings.businessName}</p>
+            <SiacMark title="SIAC" className="mb-2 h-9 w-auto text-[var(--brand-ink)]" />
+            <p className="text-base font-bold">{settings.businessName}</p>
             <p className="text-sm">Corte de caja</p>
           </div>
           <div className="text-right">

@@ -11,7 +11,7 @@ export interface SettingsData {
 }
 
 export const DEFAULT_SETTINGS: SettingsData = {
-  businessName: "Herrajes y Aluminio",
+  businessName: "SIAC · Servicio Integral en Aluminio y Cristal",
   address: "",
   phone: "",
   rfc: "",

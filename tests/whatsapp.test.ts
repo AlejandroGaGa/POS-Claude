@@ -38,7 +38,7 @@ describe("normalizePhone", () => {
 
 describe("buildNotePdf", () => {
   it("genera un PDF válido con varias páginas y caracteres fuera de WinAnsi", async () => {
-    const bytes = await buildNotePdf(sale, { businessName: "Herrajes HPA", address: "Calle 1 #2", phone: "222", rfc: "XAXX010101000", ticketFooter: "Gracias" });
+    const bytes = await buildNotePdf(sale, { businessName: "SIAC", address: "Calle 1 #2", phone: "222", rfc: "XAXX010101000", ticketFooter: "Gracias" });
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBeGreaterThan(1);
     expect(doc.getTitle()).toBe("Cotización C-000042");

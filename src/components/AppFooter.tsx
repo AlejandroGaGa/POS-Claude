@@ -1,4 +1,4 @@
-import { APP_AUTHOR, APP_NAME, APP_SHORT } from "@/lib/brand";
+import { APP_AUTHOR, APP_PRODUCT, APP_SHORT } from "@/lib/brand";
 import { cx } from "./ui";
 
 /** Pie de página: insignia del sistema y autor (la versión va en la barra lateral). */
@@ -16,7 +16,7 @@ export default function AppFooter({ className, tone = "default", stacked = false
         <span aria-hidden className="flex h-6 items-center justify-center rounded-full bg-foreground px-2 text-[10px] font-bold tracking-wide text-background">
           {APP_SHORT}
         </span>
-        <span className="font-semibold text-foreground">{APP_NAME}</span>
+        <span className="font-semibold text-foreground">{APP_PRODUCT}</span>
       </div>
       <p className="text-center">
         Desarrollado por <span className="font-medium text-foreground">{APP_AUTHOR}</span> · © {new Date().getFullYear()}

@@ -1,4 +1,4 @@
-# Ventas Mostrador HPA
+# SIAC Ventas Mostrador
 
 Mini sistema de cotización y venta de mostrador para un negocio de aluminio, vidrio y herrajes.
 Next.js 15 (App Router) + MongoDB (Mongoose), listo para desplegar en Vercel con MongoDB Atlas.
@@ -117,7 +117,7 @@ el botón ofrece mandar el resumen en texto con el WhatsApp del vendedor (como a
    (o tipo *Negocios*) → elige tu portafolio comercial.
 2. En la app, entra a **WhatsApp → Configuración de la API** (*API Setup*). Meta te da un número de prueba;
    con él solo puedes mandar a 5 números que registres en "Para" (sirve para probar hoy mismo).
-3. Para tu número real: **Agregar número de teléfono** → nombre visible (p. ej. "Herrajes HPA") → verifica con SMS o llamada.
+3. Para tu número real: **Agregar número de teléfono** → nombre visible (p. ej. "SIAC Aluminio y Cristal") → verifica con SMS o llamada.
 4. Copia el **Identificador del número de teléfono** (*Phone number ID*, un número largo). Ese va en `WHATSAPP_PHONE_NUMBER_ID`.
 5. Agrega un método de pago en *WhatsApp Manager → Configuración de la cuenta → Pagos*
    (los mensajes de plantilla de utilidad tienen un costo bajo por mensaje; revisa las tarifas de México en Meta).
@@ -142,7 +142,7 @@ Meta exige una plantilla aprobada para escribir primero a un cliente. En **Whats
 | Idioma | **Español (MEX)** → `es_MX` |
 | Encabezado | **Multimedia → Documento** (sube cualquier PDF de ejemplo) |
 | Cuerpo | ver abajo |
-| Pie (opcional) | `Herrajes HPA` |
+| Pie (opcional) | `SIAC Aluminio y Cristal` |
 
 Cuerpo (respeta el orden de las variables):
 

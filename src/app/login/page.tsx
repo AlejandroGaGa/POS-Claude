@@ -3,9 +3,9 @@ import { Suspense } from "react";
 import { getSession } from "@/lib/auth";
 import { homeFor } from "@/lib/roles";
 import LoginForm from "./LoginForm";
-import Logo from "@/components/Logo";
+import Logo, { SiacMark } from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
-import { APP_NAME } from "@/lib/brand";
+import { APP_SHORT, APP_TAGLINE } from "@/lib/brand";
 import AppFooter from "@/components/AppFooter";
 import LiquidBackground from "@/components/LiquidBackground";
 import { FadeUp } from "@/components/motion";
@@ -20,17 +20,19 @@ export default async function LoginPage() {
       {/* Panel de marca con fondo líquido (pantallas grandes) */}
       <section className="relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between">
         <LiquidBackground />
-        <FadeUp className="relative text-lg font-semibold">{APP_NAME}</FadeUp>
+        <FadeUp className="relative">
+          <SiacMark tagline title={`${APP_SHORT} · ${APP_TAGLINE}`} className="h-auto w-64 xl:w-72" />
+        </FadeUp>
         <div className="relative max-w-md">
           <FadeUp delay={0.08}>
             <p className="font-display text-5xl leading-tight">Cotiza y cobra en segundos.</p>
           </FadeUp>
           <FadeUp delay={0.16}>
-            <p className="mt-4 text-lg text-white/80">Tiras, tramos, hojas de vidrio y herrajes con el precio correcto, sin hacer cuentas a mano.</p>
+            <p className="mt-4 text-lg text-white/90">Tiras, tramos, hojas de vidrio y herrajes con el precio correcto, sin hacer cuentas a mano.</p>
           </FadeUp>
         </div>
-        <FadeUp delay={0.24} className="relative text-sm text-white/60">
-          Aluminio · Vidrio · Herrajes
+        <FadeUp delay={0.24} className="relative text-base text-white/90">
+          Aluminio · Cristal · Herrajes
         </FadeUp>
       </section>
 
@@ -42,7 +44,7 @@ export default async function LoginPage() {
         </div>
         <FadeUp className="w-full max-w-sm p-4 sm:my-auto sm:p-0">
           <div className="mb-8 flex items-center justify-between gap-3">
-            <Logo href="/login" />
+            <Logo full href="/login" />
             <ThemeToggle />
           </div>
           <h1 className="font-display text-3xl">Bienvenido</h1>

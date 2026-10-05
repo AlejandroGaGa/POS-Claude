@@ -2,21 +2,21 @@ import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/inter";
 import "@fontsource-variable/fraunces";
 import "./globals.css";
-import { APP_NAME } from "@/lib/brand";
+import { APP_NAME, APP_TAGLINE } from "@/lib/brand";
 import { MotionProvider } from "@/components/motion";
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   applicationName: APP_NAME,
-  description: "Cotización y venta de mostrador: aluminio, vidrio y herrajes",
+  description: `${APP_TAGLINE}. Cotización y venta de mostrador: aluminio, cristal y herrajes.`,
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f5f9" },
-    { media: "(prefers-color-scheme: dark)", color: "#1c1820" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0e12" },
   ],
 };
 
