@@ -155,7 +155,7 @@ export default function BillingForm({
 }
 
 /** Lista de datos fiscales de un cliente con alta, edición, copia y borrado. */
-export function BillingList({ profiles, customer }: { profiles: BillingJSON[]; customer: PickedCustomer }) {
+export function BillingList({ profiles, customer, canDelete }: { profiles: BillingJSON[]; customer: PickedCustomer; canDelete: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<BillingJSON | null>(null);
@@ -182,9 +182,11 @@ export function BillingList({ profiles, customer }: { profiles: BillingJSON[]; c
             <button type="button" className="font-medium text-accent hover:underline" onClick={() => { setEdit(b); setOpen(true); }}>
               Editar
             </button>
-            <button type="button" className="font-medium text-danger hover:underline" onClick={() => remove(b)}>
-              Borrar
-            </button>
+            {canDelete && (
+              <button type="button" className="font-medium text-danger hover:underline" onClick={() => remove(b)}>
+                Borrar
+              </button>
+            )}
           </div>
         </div>
       ))}
@@ -210,7 +212,7 @@ export function NewBillingButton() {
 }
 
 /** Acciones de un renglón en Facturación. */
-export function BillingRowActions({ profile }: { profile: BillingJSON }) {
+export function BillingRowActions({ profile, canDelete }: { profile: BillingJSON; canDelete: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   return (
@@ -219,6 +221,7 @@ export function BillingRowActions({ profile }: { profile: BillingJSON }) {
       <Button variant="ghost" className="min-h-9 px-3 text-sm" onClick={() => setOpen(true)}>
         <Icon name="edit" className="size-4" /> Editar
       </Button>
+      {canDelete && (
       <Button
         variant="ghost"
         className="min-h-9 px-3 text-sm text-danger"
@@ -231,6 +234,7 @@ export function BillingRowActions({ profile }: { profile: BillingJSON }) {
       >
         <Icon name="trash" className="size-4" />
       </Button>
+      )}
       <BillingForm open={open} onOpenChange={setOpen} profile={profile} />
     </span>
   );

@@ -16,7 +16,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
   return (
     <Page>
       <PageHeader title="Usuarios" subtitle="Quién entra al sistema y qué puede hacer." />
-      <UsersManager users={plain<UserRow[]>(users)} meId={me.id} total={total} />
+      <UsersManager users={plain<UserRow[]>(users)} meId={me.id} myRole={me.role} total={total} />
       {total > PAGE_SIZE && <Pager page={page} pageSize={PAGE_SIZE} total={total} path="/usuarios" query={{}} />}
     </Page>
   );

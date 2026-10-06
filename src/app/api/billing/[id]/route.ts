@@ -29,7 +29,7 @@ export const PUT = handle(async (req: Request, { params }: Ctx) => {
 });
 
 export const DELETE = handle(async (_req: Request, { params }: Ctx) => {
-  await requireApi("customers:manage");
+  await requireApi("billing:delete");
   await connectDB();
   const b = await load((await params).id);
   await b.deleteOne();

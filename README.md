@@ -31,7 +31,7 @@ Next.js 15 (App Router) + MongoDB (Mongoose), listo para desplegar en Vercel con
   con alta, edición, historial, saldo y botón «Vender».
 - **Datos de facturación**: varias razones sociales por cliente (RFC, régimen, uso de CFDI, C.P., correo) con botón
   «Copiar» para pegarlos en tu sistema de facturación. No timbra.
-- **Clientes preferenciales y pagos parciales**: el encargado/admin marca al cliente como preferencial (con límite de
+- **Clientes preferenciales y pagos parciales**: cualquier usuario marca al cliente como preferencial (con límite de
   crédito opcional); en la venta se activa «Pago parcial», queda el saldo y luego se registran **abonos** (cualquier
   método; en terminal la comisión se cobra sobre el abono). Lista de **Cuentas por cobrar**.
 - **Caja**: entradas y salidas por concepto, **caja chica** con saldo propio («Poner fondo» / «Gasto»), traspasos entre
@@ -55,9 +55,9 @@ Next.js 15 (App Router) + MongoDB (Mongoose), listo para desplegar en Vercel con
 
 | Rol | Puede |
 |---|---|
-| **Administrador** | Todo: tablero, usuarios, ajustes, precios, ventas de todos, cancelar ventas. |
-| **Encargado de precios** | Editar productos y precios, importar listas, ajustes masivos, vender y ver todas las ventas. |
-| **Vendedor / mostrador** | Cotizar y vender, consultar la lista de precios (solo lectura) y ver **sus** ventas. Ve todas las cotizaciones para poder cobrar las de otros compañeros. |
+| **Administrador** | Todo: tablero, usuarios, ajustes, precios, ventas de todos, cancelar ventas, dar de baja y borrar. |
+| **Encargado de precios** | Editar productos y precios, importar listas, ajustes masivos, vender, ver todas las ventas, cortes de caja y dar de baja clientes y productos. |
+| **Vendedor / mostrador** | Lo mismo que el administrador (ventas de todos, precios, clientes preferenciales y pagos parciales, cortes de caja, ajustes, usuarios con rol vendedor) **menos**: el tablero, cancelar ventas, dar de baja clientes, productos o usuarios y borrar datos de facturación. |
 
 Los permisos se validan en el servidor (no solo se ocultan botones) y el servidor **siempre recalcula los precios**
 con la base de datos antes de guardar una venta.

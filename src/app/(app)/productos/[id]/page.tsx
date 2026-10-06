@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Types } from "mongoose";
 import { requirePage } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/Product";
 import { PriceLog } from "@/lib/models/PriceLog";
@@ -34,7 +35,7 @@ function show(v: unknown): string {
 }
 
 export default async function EditarProducto({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ nuevo?: string }> }) {
-  await requirePage("products:edit");
+  const user = await requirePage("products:edit");
   const { id } = await params;
   const { nuevo } = await searchParams;
   if (!Types.ObjectId.isValid(id)) notFound();
@@ -51,7 +52,7 @@ export default async function EditarProducto({ params, searchParams }: { params:
       <PageHeader title={product.name} subtitle={`${product.code} · ${product.category}`} back={{ href: "/productos", label: "Productos" }} />
       {nuevo && <Alert tone="ok">Producto creado.</Alert>}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
-        <ProductForm product={plain<ProductJSON>(product)} categories={(categories as string[]).sort()} />
+        <ProductForm product={plain<ProductJSON>(product)} categories={(categories as string[]).sort()} canDelete={can(user.role, "products:delete")} />
         <Section title="Historial de precios" description="Últimos 30 cambios" className="xl:sticky xl:top-[calc(var(--sticky-top)+0.75rem)] xl:max-h-[calc(100dvh-var(--sticky-top)-1.5rem)] xl:overflow-y-auto">
           {logs.length === 0 ? (
             <p className="text-sm text-muted">Sin cambios registrados.</p>

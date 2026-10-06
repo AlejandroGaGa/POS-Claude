@@ -22,7 +22,9 @@ export const PUT = handle(async (req: Request, { params }: Ctx) => {
   await connectDB();
   const c = await load((await params).id);
   const touchesCredit = (data.preferential !== undefined && data.preferential !== c.preferential) || (data.creditLimit !== undefined && data.creditLimit !== c.creditLimit);
-  if (touchesCredit && !can(user.role, "customers:credit")) throw new HttpError(403, "Solo el encargado o el administrador autorizan clientes preferenciales.");
+  if (touchesCredit && !can(user.role, "customers:credit")) throw new HttpError(403, "No tienes permiso para autorizar clientes preferenciales.");
+  // Desactivar al cliente desde la edición es darlo de baja: pide el mismo permiso que el botón.
+  if (data.active === false && c.active && !can(user.role, "customers:delete")) throw new HttpError(403, "No tienes permiso para dar de baja clientes.");
   const key = phoneKey(data.phone);
   if (key.length >= 7 && (await Customer.exists({ _id: { $ne: c._id }, phoneKey: key, active: true }))) throw new HttpError(409, "Ya hay otro cliente con ese teléfono.");
   Object.assign(c, data, { phoneKey: key });
@@ -34,8 +36,7 @@ export const PUT = handle(async (req: Request, { params }: Ctx) => {
 
 /** Baja lógica: el historial de ventas se conserva. */
 export const DELETE = handle(async (_req: Request, { params }: Ctx) => {
-  const user = await requireApi("customers:manage");
-  if (!can(user.role, "customers:credit")) throw new HttpError(403, "Solo el encargado o el administrador dan de baja clientes.");
+  await requireApi("customers:delete");
   await connectDB();
   const c = await load((await params).id);
   const owes = await Sale.exists({ customer: c._id, kind: "venta", status: { $ne: "cancelada" }, balance: { $gt: 0 } });

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requirePage } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { connectDB } from "@/lib/db";
 import { BillingProfile } from "@/lib/models/BillingProfile";
 import { escapeRegex } from "@/lib/text";
@@ -13,7 +14,8 @@ import { BillingRowActions, NewBillingButton, type BillingJSON } from "@/compone
 export const metadata = { title: "Datos de facturación" };
 
 export default async function FacturacionPage({ searchParams }: { searchParams: Promise<{ q?: string; pagina?: string }> }) {
-  await requirePage("customers:manage");
+  const user = await requirePage("customers:manage");
+  const canDelete = can(user.role, "billing:delete");
   const sp = await searchParams;
   const page = parsePage(sp.pagina);
   await connectDB();
@@ -64,7 +66,7 @@ export default async function FacturacionPage({ searchParams }: { searchParams: 
             ),
             regime: <span className="text-xs text-muted">{[b.taxRegime, b.cfdiUse].filter(Boolean).join(" · ") || "—"}</span>,
             zip: b.zip || "—",
-            actions: <BillingRowActions profile={b} />,
+            actions: <BillingRowActions profile={b} canDelete={canDelete} />,
           },
         }))}
       />

@@ -32,7 +32,7 @@ export const GET = handle(async (req: Request) => {
 export const POST = handle(async (req: Request) => {
   const user = await requireApi("customers:manage");
   const data = parse(CustomerInput, await req.json());
-  if ((data.preferential || data.creditLimit) && !can(user.role, "customers:credit")) throw new HttpError(403, "Solo el encargado o el administrador autorizan clientes preferenciales.");
+  if ((data.preferential || data.creditLimit) && !can(user.role, "customers:credit")) throw new HttpError(403, "No tienes permiso para autorizar clientes preferenciales.");
   await connectDB();
   const key = phoneKey(data.phone);
   if (key.length >= 7 && (await Customer.exists({ phoneKey: key, active: true }))) throw new HttpError(409, "Ya hay un cliente con ese teléfono.");

@@ -15,7 +15,9 @@ const STD_SHEETS: SheetRow[] = [{ wCm: "180", hCm: "260", price: "" }];
 const str = (v: number | null | undefined) => (v === null || v === undefined ? "" : String(v));
 const num = (v: string) => (v.trim() === "" ? null : Number(v.replace(",", ".")));
 
-export default function ProductForm({ product, categories }: { product?: ProductJSON; categories: string[] }) {
+export default function ProductForm({ product, categories, canDelete = false }: { product?: ProductJSON; categories: string[]; canDelete?: boolean }) {
+  /** Sin permiso de baja no se puede desactivar un producto activo (sí reactivar uno dado de baja). */
+  const lockActive = !canDelete && (product?.active ?? true);
   const router = useRouter();
   const [unitType, setUnitType] = useState<UnitType>(product?.unitType ?? "pieza");
   const [bars, setBars] = useState<BarRow[]>(product?.bars?.length ? product.bars.map((b) => ({ lengthM: str(b.lengthM), price: str(b.price) })) : STD_BARS);
@@ -52,7 +54,7 @@ export default function ProductForm({ product, categories }: { product?: Product
           ? sheets.filter((x) => x.price.trim()).map((x) => ({ widthM: (num(x.wCm) ?? 0) / 100, heightM: (num(x.hCm) ?? 0) / 100, price: num(x.price) }))
           : [],
       notes: g("notes"),
-      active: f.get("active") === "on",
+      active: lockActive ? true : f.get("active") === "on",
     };
     const hasPrice = body.price || body.pricePerMeter || body.bars.length || body.pricePerM2 || body.pricePerM2Vidriero || body.sheets.length;
     if (!hasPrice) return setError("Captura al menos un precio.");
@@ -226,14 +228,16 @@ export default function ProductForm({ product, categories }: { product?: Product
           <Field label="Notas internas" htmlFor="notes">
             <Textarea id="notes" name="notes" defaultValue={product?.notes} className="min-h-11" rows={2} />
           </Field>
-          <div className="lg:pt-7">
-            <Checkbox name="active" defaultChecked={product?.active ?? true} label="Activo" hint="Aparece en el mostrador" />
-          </div>
+          {!lockActive && (
+            <div className="lg:pt-7">
+              <Checkbox name="active" defaultChecked={product?.active ?? true} label="Activo" hint="Aparece en el mostrador" />
+            </div>
+          )}
         </div>
       </Section>
 
       <FormActions status={error ? <Alert>{error}</Alert> : ok ? <Alert tone="ok">{ok}</Alert> : null}>
-        {product?.active && (
+        {product?.active && canDelete && (
           <Button type="button" variant="secondary" className="flex-1 text-danger sm:flex-none" onClick={remove}>
             Dar de baja
           </Button>

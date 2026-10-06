@@ -56,7 +56,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
         <Link href={`/mostrador?cliente=${id}`} className={btn("primary")}>
           <Icon name="cart" className="size-4" /> Vender
         </Link>
-        <CustomerActions customer={c} canCredit={canCredit} />
+        <CustomerActions customer={c} canCredit={canCredit} canDelete={can(user.role, "customers:delete")} />
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -66,7 +66,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
         <Stat
           label="Crédito"
           value={customer.preferential ? (customer.creditLimit ? formatMoney(customer.creditLimit) : "Sin límite") : "No"}
-          hint={customer.preferential ? "Puede pagar en parcialidades" : canCredit ? "Edítalo para hacerlo preferencial" : "Pide al encargado autorizarlo"}
+          hint={customer.preferential ? "Puede pagar en parcialidades" : canCredit ? "Edítalo para hacerlo preferencial" : "Pide al administrador autorizarlo"}
           className="col-span-2 lg:col-span-1"
         />
       </div>
@@ -131,7 +131,7 @@ export default async function ClientePage({ params, searchParams }: { params: Pr
             </dl>
           </Section>
           <Section title="Datos de facturación" description="Razones sociales para facturarle.">
-            <BillingList profiles={plain<BillingJSON[]>(billing)} customer={{ _id: id, name: customer.name }} />
+            <BillingList profiles={plain<BillingJSON[]>(billing)} customer={{ _id: id, name: customer.name }} canDelete={can(user.role, "billing:delete")} />
           </Section>
         </div>
       </div>

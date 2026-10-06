@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES, type Role } from "@/lib/roles";
+import { ROLE_DESCRIPTIONS, ROLE_LABELS, ROLES, assignableRoles, can, type Role } from "@/lib/roles";
 import { Chip, Modal, Table } from "@heroui/react";
 import { Alert, Button, Field, Input, Section, Select } from "./ui";
 import Icon from "./Icon";
@@ -21,8 +21,12 @@ async function call(url: string, method: string, body: unknown) {
   return data;
 }
 
-export default function UsersManager({ users, meId, total }: { users: UserRow[]; meId: string; total?: number }) {
+export default function UsersManager({ users, meId, myRole, total }: { users: UserRow[]; meId: string; myRole: Role; total?: number }) {
   const router = useRouter();
+  /** Roles que este usuario puede crear, editar o asignar (nunca uno con más permisos que el suyo). */
+  const myRoles = assignableRoles(myRole);
+  const canEdit = (u: UserRow) => myRoles.includes(u.role);
+  const canDeactivate = can(myRole, "users:deactivate");
   const [msg, setMsg] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
 
   async function create(e: React.FormEvent<HTMLFormElement>) {
@@ -52,15 +56,18 @@ export default function UsersManager({ users, meId, total }: { users: UserRow[];
   const [pwUser, setPwUser] = useState<UserRow | null>(null);
   const [pw, setPw] = useState("");
 
-  const roleSelect = (u: UserRow, id: string) => (
-    <Select id={id} aria-label={`Rol de ${u.name}`} defaultValue={u.role} onChange={(e) => update(u._id, { role: e.target.value }, `Rol de ${u.name} actualizado.`)} className="min-h-10">
-      {ROLES.map((r) => (
-        <option key={r} value={r}>
-          {ROLE_LABELS[r]}
-        </option>
-      ))}
-    </Select>
-  );
+  const roleSelect = (u: UserRow, id: string) =>
+    canEdit(u) && myRoles.length > 1 ? (
+      <Select id={id} aria-label={`Rol de ${u.name}`} defaultValue={u.role} onChange={(e) => update(u._id, { role: e.target.value }, `Rol de ${u.name} actualizado.`)} className="min-h-10">
+        {myRoles.map((r) => (
+          <option key={r} value={r}>
+            {ROLE_LABELS[r]}
+          </option>
+        ))}
+      </Select>
+    ) : (
+      <span className="text-base">{ROLE_LABELS[u.role]}</span>
+    );
   const status = (u: UserRow) => (
     <span className="flex flex-wrap gap-1.5">
       <Chip size="sm" variant="soft" color={u.active ? "success" : "danger"}>
@@ -73,18 +80,21 @@ export default function UsersManager({ users, meId, total }: { users: UserRow[];
       )}
     </span>
   );
-  const actions = (u: UserRow) => (
+  const actions = (u: UserRow) =>
+    !canEdit(u) ? (
+      <span className="block text-right text-sm text-muted">Solo el administrador</span>
+    ) : (
     <span className="flex flex-wrap justify-end gap-2">
       <Button variant="secondary" className="min-h-10 px-4 text-sm" onClick={() => { setPw(""); setPwUser(u); }}>
         Contraseña
       </Button>
-      {u._id !== meId && (
+      {u._id !== meId && (canDeactivate || !u.active) && (
         <Button variant="secondary" className={u.active ? "min-h-10 px-4 text-sm text-danger" : "min-h-10 px-4 text-sm"} onClick={() => update(u._id, { active: !u.active }, u.active ? `${u.name} desactivado.` : `${u.name} reactivado.`)}>
           {u.active ? "Desactivar" : "Reactivar"}
         </Button>
       )}
     </span>
-  );
+    );
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
@@ -104,7 +114,7 @@ export default function UsersManager({ users, meId, total }: { users: UserRow[];
             </div>
             <Field label="Rol" htmlFor="n-role">
               <Select id="n-role" name="role" defaultValue="vendedor">
-                {ROLES.map((r) => (
+                {myRoles.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_LABELS[r]}
                   </option>

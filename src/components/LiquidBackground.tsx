@@ -2,15 +2,44 @@
 import { useEffect, useRef } from "react";
 
 type RGBA = [number, number, number, number];
-type Blob = { color: RGBA; r: number; cx: number; cy: number; ax: number; ay: number; sx: number; sy: number; phase: number };
+type Blob = { r: number; cx: number; cy: number; ax: number; ay: number; sx: number; sy: number; phase: number };
+/** Colores del fondo: una mancha por cada elemento de BLOBS, degradado base, relleno de la ondulación y luz del puntero. */
+type Palette = { blobs: RGBA[]; from: string; to: string; fill: string; light: RGBA };
 
-// Manchas en los tonos del logotipo: azul acero, azul cristal y pizarra. Posiciones y radios relativos al lienzo.
-// Las opacidades están medidas para que el texto blanco encima conserve contraste AA aun donde se enciman.
+// Verdes del logotipo. En tema claro el fondo es verde claro (el texto encima va en verde profundo);
+// en tema oscuro, verde profundo (texto blanco). Las opacidades están medidas para conservar contraste AA.
+const LIGHT: Palette = {
+  blobs: [
+    [150, 215, 180, 0.5],
+    [95, 190, 145, 0.42],
+    [236, 250, 243, 0.5],
+    [60, 160, 115, 0.28],
+  ],
+  from: "rgb(214, 242, 227)",
+  to: "rgb(143, 215, 176)",
+  fill: "rgb(180, 230, 203)",
+  light: [255, 255, 255, 0.3],
+};
+const DARK: Palette = {
+  blobs: [
+    [30, 110, 76, 0.5],
+    [14, 80, 52, 0.6],
+    [96, 160, 126, 0.22],
+    [8, 26, 19, 0.7],
+  ],
+  from: "rgb(12, 31, 23)",
+  to: "rgb(20, 85, 56)",
+  fill: "rgb(14, 50, 35)",
+  light: [200, 240, 220, 0.12],
+};
+const currentPalette = () => (document.documentElement.classList.contains("dark") ? DARK : LIGHT);
+
+// Posiciones y radios de las manchas, relativos al lienzo.
 const BLOBS: Blob[] = [
-  { color: [62, 100, 132, 0.5], r: 0.55, cx: 0.2, cy: 0.18, ax: 0.18, ay: 0.14, sx: 0.11, sy: 0.08, phase: 0 },
-  { color: [39, 81, 112, 0.6], r: 0.5, cx: 0.75, cy: 0.62, ax: 0.2, ay: 0.16, sx: 0.07, sy: 0.1, phase: 1.7 },
-  { color: [129, 160, 184, 0.22], r: 0.42, cx: 0.18, cy: 0.8, ax: 0.22, ay: 0.1, sx: 0.09, sy: 0.12, phase: 3.1 },
-  { color: [20, 27, 36, 0.7], r: 0.45, cx: 0.82, cy: 0.12, ax: 0.14, ay: 0.2, sx: 0.12, sy: 0.07, phase: 4.4 },
+  { r: 0.55, cx: 0.2, cy: 0.18, ax: 0.18, ay: 0.14, sx: 0.11, sy: 0.08, phase: 0 },
+  { r: 0.5, cx: 0.75, cy: 0.62, ax: 0.2, ay: 0.16, sx: 0.07, sy: 0.1, phase: 1.7 },
+  { r: 0.42, cx: 0.18, cy: 0.8, ax: 0.22, ay: 0.1, sx: 0.09, sy: 0.12, phase: 3.1 },
+  { r: 0.45, cx: 0.82, cy: 0.12, ax: 0.14, ay: 0.2, sx: 0.12, sy: 0.07, phase: 4.4 },
 ];
 
 /**
@@ -73,6 +102,7 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
 
     let raf = 0;
     let visible = true;
+    let pal = currentPalette();
     const t0 = performance.now();
 
     const frame = (now: number) => {
@@ -81,20 +111,20 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
       py += (ty - py) * 0.06;
 
       const bg = sctx.createLinearGradient(0, 0, W, H);
-      bg.addColorStop(0, "rgb(27, 34, 43)");
-      bg.addColorStop(1, "rgb(32, 70, 98)");
+      bg.addColorStop(0, pal.from);
+      bg.addColorStop(1, pal.to);
       sctx.fillStyle = bg;
       sctx.fillRect(0, 0, W, H);
 
       sctx.globalCompositeOperation = "source-over";
       const m = Math.max(W, H);
-      for (const b of BLOBS) {
+      BLOBS.forEach((b, i) => {
         const x = (b.cx + Math.sin(t * b.sx + b.phase) * b.ax) * W;
         const y = (b.cy + Math.cos(t * b.sy + b.phase * 1.3) * b.ay) * H;
         const breathe = 1 + Math.sin(t * 0.35 + b.phase) * 0.08;
-        drawBlob(x, y, b.r * m * breathe, b.color);
-      }
-      drawBlob(px * W, py * H, 0.3 * m, [200, 225, 245, 0.12]);
+        drawBlob(x, y, b.r * m * breathe, pal.blobs[i]);
+      });
+      drawBlob(px * W, py * H, 0.3 * m, pal.light);
       sctx.globalCompositeOperation = "source-over";
 
       if (!ripple || reduce) {
@@ -102,7 +132,7 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
       } else {
         // Ondulación tipo agua: desplaza filas y luego columnas con ondas que viajan.
         const amp = Math.max(1.5, W / 55);
-        ctx.fillStyle = "rgb(29, 44, 58)";
+        ctx.fillStyle = pal.fill;
         ctx.fillRect(0, 0, W, H);
         for (let y = 0; y < H; y++) {
           const dx = Math.sin(y * 0.18 + t * 1.1) * amp + Math.sin(y * 0.05 - t * 0.6) * amp * 1.4;
@@ -130,12 +160,19 @@ export default function LiquidBackground({ className = "", ripple = true }: { cl
       if (visible) start();
     };
     document.addEventListener("visibilitychange", onVis);
+    // Al cambiar entre tema claro y oscuro se cambia la paleta (y se redibuja aunque no haya animación).
+    const mo = new MutationObserver(() => {
+      pal = currentPalette();
+      start();
+    });
+    mo.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
     start();
 
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
       io.disconnect();
+      mo.disconnect();
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("pointermove", onMove);
     };

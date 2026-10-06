@@ -3,9 +3,8 @@ import { Suspense } from "react";
 import { getSession } from "@/lib/auth";
 import { homeFor } from "@/lib/roles";
 import LoginForm from "./LoginForm";
-import Logo, { SiacMark } from "@/components/Logo";
+import Logo, { SiacLogo } from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
-import { APP_SHORT, APP_TAGLINE } from "@/lib/brand";
 import AppFooter from "@/components/AppFooter";
 import LiquidBackground from "@/components/LiquidBackground";
 import { FadeUp } from "@/components/motion";
@@ -18,27 +17,27 @@ export default async function LoginPage() {
   return (
     <main className="grid min-h-[100dvh] lg:grid-cols-[1.1fr_1fr]">
       {/* Panel de marca con fondo líquido (pantallas grandes) */}
-      <section className="relative hidden overflow-hidden p-10 text-white lg:flex lg:flex-col lg:justify-between">
+      <section className="relative hidden overflow-hidden p-10 text-[color:var(--hero-fg)] lg:flex lg:flex-col lg:justify-between">
         <LiquidBackground />
         <FadeUp className="relative">
-          <SiacMark tagline title={`${APP_SHORT} · ${APP_TAGLINE}`} className="h-auto w-64 xl:w-72" />
+          <SiacLogo className="h-auto w-80 [--brand-glass:var(--hero-glass)] [--brand-text:var(--hero-fg)] xl:w-96" />
         </FadeUp>
         <div className="relative max-w-md">
           <FadeUp delay={0.08}>
             <p className="font-display text-5xl leading-tight">Cotiza y cobra en segundos.</p>
           </FadeUp>
           <FadeUp delay={0.16}>
-            <p className="mt-4 text-lg text-white/90">Tiras, tramos, hojas de vidrio y herrajes con el precio correcto, sin hacer cuentas a mano.</p>
+            <p className="mt-4 text-lg text-[color:var(--hero-fg-soft)]">Tiras, tramos, hojas de vidrio y herrajes con el precio correcto, sin hacer cuentas a mano.</p>
           </FadeUp>
         </div>
-        <FadeUp delay={0.24} className="relative text-base text-white/90">
+        <FadeUp delay={0.24} className="relative text-base text-[color:var(--hero-fg-soft)]">
           Aluminio · Cristal · Herrajes
         </FadeUp>
       </section>
 
       <section className="flex flex-col items-center justify-start sm:p-8">
         {/* En celular: franja líquida arriba */}
-        <div className="relative h-44 w-full overflow-hidden rounded-b-[2rem] text-white sm:hidden">
+        <div className="relative h-44 w-full overflow-hidden rounded-b-[2rem] text-[color:var(--hero-fg)] sm:hidden">
           <LiquidBackground />
           <p className="font-display relative px-5 pt-20 text-3xl leading-tight">Cotiza y cobra en segundos.</p>
         </div>

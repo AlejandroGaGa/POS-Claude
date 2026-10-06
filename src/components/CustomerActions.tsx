@@ -6,7 +6,7 @@ import { Button } from "./ui";
 import Icon from "./Icon";
 
 /** Editar / dar de baja desde el detalle del cliente. */
-export default function CustomerActions({ customer, canCredit }: { customer: CustomerJSON; canCredit: boolean }) {
+export default function CustomerActions({ customer, canCredit, canDelete }: { customer: CustomerJSON; canCredit: boolean; canDelete: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState("");
@@ -15,7 +15,7 @@ export default function CustomerActions({ customer, canCredit }: { customer: Cus
       <Button variant="secondary" onClick={() => setOpen(true)}>
         <Icon name="edit" className="size-4" /> Editar
       </Button>
-      {canCredit && (
+      {canDelete && (
         <Button
           variant="secondary"
           className="text-danger"

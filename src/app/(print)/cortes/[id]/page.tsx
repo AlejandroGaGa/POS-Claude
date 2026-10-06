@@ -52,7 +52,7 @@ export default async function CutPrint({ params, searchParams }: { params: Promi
       <article className="print-area flex flex-col gap-4 rounded-3xl bg-surface p-5 text-[15px] shadow-[var(--surface-shadow)] sm:p-6">
         <header className="flex items-start justify-between gap-3 border-b border-line pb-3">
           <div>
-            <SiacMark title="SIAC" className="mb-2 h-9 w-auto text-[var(--brand-ink)]" />
+            <SiacMark className="mb-2 h-12" />
             <p className="text-base font-bold">{settings.businessName}</p>
             <p className="text-sm">Corte de caja</p>
           </div>

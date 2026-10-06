@@ -13,7 +13,7 @@ export default function AppFooter({ className, tone = "default", stacked = false
       )}
     >
       <div className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-surface py-1 pr-3.5 pl-1 shadow-[var(--surface-shadow)]">
-        <span aria-hidden className="flex h-6 items-center justify-center rounded-full bg-foreground px-2 text-[10px] font-bold tracking-wide text-background">
+        <span aria-hidden className="flex h-6 items-center justify-center rounded-full bg-accent px-2 text-[11px] font-bold tracking-wide text-accent-foreground">
           {APP_SHORT}
         </span>
         <span className="font-semibold text-foreground">{APP_PRODUCT}</span>

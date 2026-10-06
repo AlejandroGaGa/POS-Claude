@@ -1,4 +1,5 @@
 import { requirePage } from "@/lib/auth";
+import { can } from "@/lib/roles";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/Product";
 import { Page, PageHeader, Section } from "@/components/ui";
@@ -8,7 +9,7 @@ import ProductForm from "@/components/ProductForm";
 export const metadata = { title: "Nuevo producto" };
 
 export default async function NuevoProducto() {
-  await requirePage("products:edit");
+  const user = await requirePage("products:edit");
   await connectDB();
   const categories = (await Product.distinct("category")) as string[];
   const help: Record<string, string> = {
@@ -22,7 +23,7 @@ export default async function NuevoProducto() {
     <Page>
       <PageHeader title="Nuevo producto" subtitle="Captura los datos y al menos un precio." back={{ href: "/productos", label: "Productos" }} />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_340px] xl:items-start">
-        <ProductForm categories={categories.sort()} />
+        <ProductForm categories={categories.sort()} canDelete={can(user.role, "products:delete")} />
         <Section title="Formas de venta" description="Elige la que corresponda en «¿Cómo se vende?»" className="xl:sticky xl:top-[calc(var(--sticky-top)+0.75rem)]">
           <dl className="flex flex-col gap-3 text-sm">
             {UNIT_TYPES.map((t) => (

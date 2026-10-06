@@ -56,7 +56,7 @@ export default function HomeTiles({ tiles, canCredit }: { tiles: Tile[]; canCred
               <span
                 className={cx(
                   "flex size-16 items-center justify-center rounded-2xl transition-transform duration-200 group-hover:scale-105 sm:size-20 sm:rounded-3xl",
-                  t.primary ? "bg-white/15 text-white" : "bg-accent-soft text-accent-soft-foreground",
+                  t.primary ? "bg-[var(--hero-chip)] text-[color:var(--hero-fg)]" : "bg-accent-soft text-accent-soft-foreground",
                 )}
               >
                 <Icon name={t.icon} className="size-8 sm:size-10" />
@@ -64,13 +64,13 @@ export default function HomeTiles({ tiles, canCredit }: { tiles: Tile[]; canCred
               <span className="mt-auto flex w-full items-end justify-between gap-3">
                 <span className="min-w-0">
                   <span className="font-display block text-2xl leading-tight sm:text-[1.75rem] xl:text-[2rem]">{t.title}</span>
-                  <span className={cx("mt-1 block text-[15px]", t.primary ? "text-white/80" : "text-muted")}>{t.hint}</span>
+                  <span className={cx("mt-1 block text-[15px]", t.primary ? "text-[color:var(--hero-fg-soft)]" : "text-muted")}>{t.hint}</span>
                 </span>
                 <kbd
                   aria-hidden
                   className={cx(
                     "hidden size-8 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold lg:flex",
-                    t.primary ? "border-white/25 text-white/80" : "border-border text-muted",
+                    t.primary ? "border-[var(--hero-line)] text-[color:var(--hero-fg-soft)]" : "border-border text-muted",
                   )}
                 >
                   {i + 1}
@@ -80,7 +80,7 @@ export default function HomeTiles({ tiles, canCredit }: { tiles: Tile[]; canCred
           );
           const cls = cx(
             "group relative flex h-full min-h-48 w-full flex-col items-start gap-6 overflow-hidden rounded-[2rem] p-6 text-left shadow-[var(--surface-shadow)] outline-none transition-[transform,box-shadow] duration-200 hover:-translate-y-1 hover:shadow-[var(--overlay-shadow)] focus-visible:ring-4 focus-visible:ring-focus active:scale-[0.98] sm:min-h-60 sm:p-7 xl:min-h-[19rem] xl:p-8",
-            t.primary ? "text-white" : "bg-surface text-foreground",
+            t.primary ? "text-[color:var(--hero-fg)]" : "bg-surface text-foreground",
           );
           const style = t.primary ? { background: "linear-gradient(140deg, var(--hero-from), var(--hero-to))" } : undefined;
           return (

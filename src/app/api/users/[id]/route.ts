@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import { connectDB } from "@/lib/db";
 import { HttpError, handle, requireApi } from "@/lib/auth";
 import { User } from "@/lib/models/User";
+import { ROLE_LABELS, can, canManageRole } from "@/lib/roles";
 import { UserUpdate, parse } from "@/lib/validation";
 
 export const PUT = handle(async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
@@ -14,6 +15,11 @@ export const PUT = handle(async (req: Request, { params }: { params: Promise<{ i
   await connectDB();
   const u = await User.findById(id);
   if (!u) throw new HttpError(404, "Usuario no encontrado.");
+
+  // Nadie administra cuentas con más permisos que los suyos (ni les cambia la contraseña), ni asigna un rol así.
+  if (!canManageRole(me.role, u.role)) throw new HttpError(403, `No tienes permiso para modificar a un usuario con el rol «${ROLE_LABELS[u.role]}».`);
+  if (data.role && !canManageRole(me.role, data.role)) throw new HttpError(403, `No tienes permiso para asignar el rol «${ROLE_LABELS[data.role]}».`);
+  if (data.active === false && u.active && !can(me.role, "users:deactivate")) throw new HttpError(403, "Solo el administrador puede desactivar usuarios.");
 
   // Evita quedarse sin administradores activos.
   const losingAdmin = u.role === "admin" && ((data.role && data.role !== "admin") || data.active === false);

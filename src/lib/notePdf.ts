@@ -3,7 +3,7 @@ import { shownLine } from "./adjust";
 import { formatMoney, formatNumber, PAYMENT_LABELS, type PaymentMethod } from "./pricing";
 import { fmtDate } from "./labels";
 import { APP_NAME } from "./brand";
-import { LOGO_GLASS, LOGO_GLASS_FACET, LOGO_H, LOGO_INK } from "./logoPaths";
+import { ICON_BOX, LOGO_ARC, LOGO_GLASS, LOGO_OUTLINES, LOGO_PANEL, LOGO_PANEL_FACET, LOGO_WORDMARK, WORDMARK_BOX } from "./logoPaths";
 
 export interface PdfBusiness {
   businessName: string;
@@ -74,13 +74,14 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
 
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  // Colores del logotipo: tinta pizarra, gris medio y azul cristal.
-  const ink = rgb(0.12, 0.14, 0.17);
-  const muted = rgb(0.34, 0.37, 0.41);
-  const line = rgb(0.82, 0.85, 0.88);
-  const logoInk = rgb(0.18, 0.2, 0.227);
-  const glass = rgb(0.506, 0.627, 0.722);
-  const glassLight = rgb(0.553, 0.667, 0.753);
+  // Tinta y grises del sistema, y colores del logotipo (verde, fachada con su faceta clara y cristal gris).
+  const ink = rgb(0.11, 0.14, 0.13);
+  const muted = rgb(0.33, 0.38, 0.36);
+  const line = rgb(0.82, 0.86, 0.84);
+  const logoGreen = rgb(0.055, 0.314, 0.204);
+  const panel = rgb(0.078, 0.353, 0.243);
+  const panelLight = rgb(0.184, 0.459, 0.337);
+  const glass = rgb(0.529, 0.541, 0.525);
 
   const W = 612;
   const H = 792;
@@ -102,12 +103,21 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
     }
   };
 
-  // Encabezado: logotipo arriba a la izquierda; debajo, nombre y datos del negocio.
-  const LOGO_PT = 26;
-  const logo = { x: M, y: y + 12, scale: LOGO_PT / LOGO_H };
-  page.drawSvgPath(LOGO_INK, { ...logo, color: logoInk });
-  page.drawSvgPath(LOGO_GLASS, { ...logo, color: glass });
-  page.drawSvgPath(LOGO_GLASS_FACET, { ...logo, color: glassLight });
+  // Encabezado: logotipo (ícono + letras) arriba a la izquierda; debajo, nombre y datos del negocio.
+  // Las rutas viven en el lienzo del arte original: se escalan y se recorren para que el recuadro empiece en (left, top).
+  const place = (box: readonly [number, number, number, number], left: number, top: number, height: number) => {
+    const scale = height / box[3];
+    return { x: left - box[0] * scale, y: top + box[1] * scale, scale, width: box[2] * scale };
+  };
+  const ICON_PT = 32;
+  const icon = place(ICON_BOX, M, y + 14, ICON_PT);
+  page.drawSvgPath(LOGO_PANEL, { ...icon, color: panel });
+  page.drawSvgPath(LOGO_PANEL_FACET, { ...icon, color: panelLight });
+  page.drawSvgPath(LOGO_GLASS, { ...icon, color: glass });
+  page.drawSvgPath(`${LOGO_OUTLINES} ${LOGO_ARC}`, { ...icon, color: logoGreen });
+  const WORD_PT = 15;
+  const word = place(WORDMARK_BOX, M + icon.width + 7, y + 14 - ICON_PT + WORD_PT + 1, WORD_PT);
+  page.drawSvgPath(LOGO_WORDMARK, { ...word, color: logoGreen });
   right(title, W - M, 14, bold);
   y -= 18;
   right(sale.folio, W - M, 13, bold);
@@ -143,7 +153,7 @@ export async function buildNotePdf(sale: PdfSale, biz: PdfBusiness): Promise<Uin
   const cAmt = W - M;
   const nameMax = cQty - M - 50;
   function drawTableHeader() {
-    page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: rgb(0.94, 0.95, 0.96) });
+    page.drawRectangle({ x: M, y: y - 6, width: W - 2 * M, height: 20, color: rgb(0.94, 0.96, 0.95) });
     text("Producto", M + 6, 9.5, bold);
     right("Cant.", cQty, 9.5, bold);
     right("P. unit.", cUnit, 9.5, bold);

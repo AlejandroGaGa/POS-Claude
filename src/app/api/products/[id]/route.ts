@@ -6,6 +6,7 @@ import { Product } from "@/lib/models/Product";
 import { PriceLog } from "@/lib/models/PriceLog";
 import { ProductInput, parse } from "@/lib/validation";
 import { priceChanges } from "@/lib/priceDiff";
+import { can } from "@/lib/roles";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -27,6 +28,8 @@ export const PUT = handle(async (req: Request, { params }: Ctx) => {
   const user = await requireApi("products:edit");
   const data = parse(ProductInput, await req.json());
   const p = await load((await params).id);
+  // Desmarcar «Activo» es dar de baja el producto: pide el mismo permiso que el botón.
+  if (p.active && data.active === false && !can(user.role, "products:delete")) throw new HttpError(403, "No tienes permiso para dar de baja productos.");
   const changes = priceChanges(p.toObject() as Record<string, unknown>, data);
   p.set(data);
   await p.save();
@@ -38,7 +41,7 @@ export const PUT = handle(async (req: Request, { params }: Ctx) => {
 
 /** Baja lógica: se oculta del mostrador pero se conserva en las ventas pasadas. */
 export const DELETE = handle(async (_req: Request, { params }: Ctx) => {
-  await requireApi("products:edit");
+  await requireApi("products:delete");
   const p = await load((await params).id);
   p.active = false;
   await p.save();

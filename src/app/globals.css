@@ -2,8 +2,8 @@
 @import "@heroui/styles";
 
 /*
- * Tema "SIAC": los colores salen del logotipo — grises pizarra (letras) y azul
- * cristal (acento). Tipografía Fraunces (títulos y cifras) + Inter (texto).
+ * Tema "SIAC": los colores salen del logotipo — verde (acento) sobre grises con un
+ * matiz verde muy leve. Tipografía Fraunces (títulos y cifras) + Inter (texto).
  * Variables de HeroUI v3.
  */
 @layer base {
@@ -13,20 +13,20 @@
     --radius: 0.875rem;
     --field-radius: 0.75rem;
 
-    --background: oklch(0.972 0.004 255);
-    --foreground: oklch(0.26 0.016 256);
+    --background: oklch(0.972 0.004 168);
+    --foreground: oklch(0.25 0.014 170);
 
     --surface: oklch(1 0 0);
-    --surface-secondary: oklch(0.962 0.006 255);
-    --surface-tertiary: oklch(0.94 0.008 255);
+    --surface-secondary: oklch(0.962 0.006 168);
+    --surface-tertiary: oklch(0.94 0.008 168);
 
     --overlay: oklch(1 0 0);
-    --muted: oklch(0.48 0.02 255);
+    --muted: oklch(0.48 0.018 170);
 
-    --default: oklch(0.948 0.007 255);
-    --default-foreground: oklch(0.26 0.016 256);
+    --default: oklch(0.948 0.007 168);
+    --default-foreground: oklch(0.25 0.014 170);
 
-    --accent: oklch(0.42 0.07 243);
+    --accent: oklch(0.5 0.105 160);
     --accent-foreground: oklch(0.99 0 0);
 
     --success: oklch(0.56 0.14 150);
@@ -37,41 +37,50 @@
     --danger-foreground: oklch(0.99 0 0);
 
     --field-background: oklch(1 0 0);
-    --field-border: oklch(0.9 0.008 255);
-    --border: oklch(0.915 0.007 255);
-    --separator: oklch(0.93 0.006 255);
+    --field-border: oklch(0.9 0.008 168);
+    --border: oklch(0.915 0.007 168);
+    --separator: oklch(0.93 0.006 168);
 
-    --surface-shadow: 0 1px 2px 0 rgb(20 30 45 / 0.04), 0 0 0 1px rgb(20 30 45 / 0.03);
+    --surface-shadow: 0 1px 2px 0 rgb(15 40 28 / 0.04), 0 0 0 1px rgb(15 40 28 / 0.03);
     --field-shadow: none;
-    --overlay-shadow: 0 12px 40px -8px rgb(20 30 45 / 0.18), 0 2px 6px rgb(20 30 45 / 0.06);
+    --overlay-shadow: 0 12px 40px -8px rgb(15 40 28 / 0.18), 0 2px 6px rgb(15 40 28 / 0.06);
 
     /* Banner oscuro (resumen del día) */
-    --hero-from: oklch(0.25 0.02 256);
-    --hero-to: oklch(0.38 0.065 243);
+    /* Banners y panel de la entrada: verdes claros con texto verde profundo */
+    --hero-from: oklch(0.9 0.07 160);
+    --hero-to: oklch(0.78 0.11 158);
+    --hero-fg: oklch(0.24 0.06 160);
+    --hero-fg-soft: oklch(0.33 0.065 160);
+    --hero-chip: rgb(255 255 255 / 0.45);
+    --hero-line: color-mix(in oklab, var(--hero-fg) 30%, transparent);
+    --hero-glass: #646a66; /* cristal gris del logotipo, más oscuro para que se note sobre el verde claro */
 
-    /* Logotipo: pizarra de las letras y azul del cristal */
-    --brand-ink: #2e333a;
-    --brand-glass: #81a0b8;
-    --brand-glass-light: #8daac0;
+    /* Logotipo: verde de trazos y letras, degradado de la fachada, cristal gris y gris del lema */
+    --brand-ink: #0e5034;
+    --brand-text: #3e464b;
+    --brand-panel-from: #3a8462;
+    --brand-panel-mid: #145a3e;
+    --brand-panel-to: #0c3d29;
+    --brand-glass: #878a86;
   }
 
   .dark,
   [data-theme="dark"] {
-    --background: oklch(0.16 0.01 255);
-    --foreground: oklch(0.96 0.005 255);
+    --background: oklch(0.16 0.01 168);
+    --foreground: oklch(0.96 0.005 168);
 
-    --surface: oklch(0.21 0.012 255);
-    --surface-secondary: oklch(0.25 0.014 255);
-    --surface-tertiary: oklch(0.28 0.016 255);
+    --surface: oklch(0.21 0.012 168);
+    --surface-secondary: oklch(0.25 0.014 168);
+    --surface-tertiary: oklch(0.28 0.016 168);
 
-    --overlay: oklch(0.23 0.012 255);
-    --muted: oklch(0.74 0.015 255);
+    --overlay: oklch(0.23 0.012 168);
+    --muted: oklch(0.74 0.015 168);
 
-    --default: oklch(0.27 0.014 255);
-    --default-foreground: oklch(0.96 0.005 255);
+    --default: oklch(0.27 0.014 168);
+    --default-foreground: oklch(0.96 0.005 168);
 
-    --accent: oklch(0.8 0.06 240);
-    --accent-foreground: oklch(0.2 0.03 250);
+    --accent: oklch(0.82 0.09 160);
+    --accent-foreground: oklch(0.2 0.03 165);
 
     --success: oklch(0.75 0.15 150);
     --success-foreground: oklch(0.2 0.03 150);
@@ -80,18 +89,40 @@
     --danger: oklch(0.7 0.18 25);
     --danger-foreground: oklch(0.18 0.02 25);
 
-    --field-background: oklch(0.24 0.013 255);
-    --field-border: oklch(0.33 0.016 255);
-    --border: oklch(0.3 0.015 255);
-    --separator: oklch(0.28 0.014 255);
+    --field-background: oklch(0.24 0.013 168);
+    --field-border: oklch(0.33 0.016 168);
+    --border: oklch(0.3 0.015 168);
+    --separator: oklch(0.28 0.014 168);
 
     --surface-shadow: 0 0 0 1px rgb(255 255 255 / 0.04);
 
-    --hero-from: oklch(0.26 0.02 256);
-    --hero-to: oklch(0.38 0.065 243);
+    /* En oscuro los banners siguen en verde profundo con texto blanco */
+    --hero-from: oklch(0.22 0.03 165);
+    --hero-to: oklch(0.4 0.08 160);
+    --hero-fg: #fff;
+    --hero-fg-soft: rgb(255 255 255 / 0.85);
+    --hero-chip: rgb(255 255 255 / 0.15);
+    --hero-line: rgb(255 255 255 / 0.25);
+    --hero-glass: #9a9d99;
 
-    --brand-ink: var(--foreground);
+    /* En oscuro el logotipo se aclara para que se lea sobre el fondo */
+    --brand-ink: oklch(0.84 0.07 160);
+    --brand-text: var(--foreground);
+    --brand-panel-from: oklch(0.82 0.09 160);
+    --brand-panel-mid: oklch(0.64 0.095 160);
+    --brand-panel-to: oklch(0.48 0.09 160);
+    --brand-glass: #9a9d99;
   }
+}
+
+/* Logotipo en un solo color (el del texto), p. ej. blanco sobre el fondo de la pantalla de entrada. */
+.brand-mono {
+  --brand-ink: currentColor;
+  --brand-text: currentColor;
+  --brand-panel-from: currentColor;
+  --brand-panel-mid: color-mix(in srgb, currentColor 82%, transparent);
+  --brand-panel-to: color-mix(in srgb, currentColor 62%, transparent);
+  --brand-glass: color-mix(in srgb, currentColor 45%, transparent);
 }
 
 /* Alias de colores usados en la app (mapeados a las variables de HeroUI). */
@@ -307,5 +338,17 @@ html[data-nav-pending] [data-results] {
   .print-area * {
     color: #000 !important;
     border-color: #999 !important;
+  }
+  /* En papel el logotipo va siempre con sus colores originales, aunque la pantalla esté en tema oscuro. */
+  :root,
+  .light,
+  .dark,
+  [data-theme] {
+    --brand-ink: #0e5034;
+    --brand-text: #3e464b;
+    --brand-panel-from: #3a8462;
+    --brand-panel-mid: #145a3e;
+    --brand-panel-to: #0c3d29;
+    --brand-glass: #878a86;
   }
 }

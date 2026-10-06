@@ -68,18 +68,18 @@ export default async function TableroPage({ searchParams }: { searchParams: Prom
       <FadeUp>
       <section
         aria-label="Resumen del periodo"
-        className="relative overflow-hidden rounded-3xl p-5 text-white sm:p-6"
+        className="relative overflow-hidden rounded-3xl p-5 text-[color:var(--hero-fg)] sm:p-6"
         style={{ background: "linear-gradient(120deg, var(--hero-from), var(--hero-to))" }}
       >
-        <div aria-hidden className="pointer-events-none absolute -top-16 -right-10 size-56 rounded-full bg-white/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -top-16 -right-10 size-56 rounded-full bg-white/20 blur-3xl" />
         <div className="relative flex items-center justify-between gap-3">
           <p className="font-display flex items-center gap-2 text-lg">
             <Icon name="sparkles" className="size-5" /> Resumen del periodo
           </p>
-          <p className="text-sm text-white/70">{n === 1 ? "1 día" : `${n} días`}</p>
+          <p className="text-sm text-[color:var(--hero-fg-soft)]">{n === 1 ? "1 día" : `${n} días`}</p>
         </div>
-        <p className="relative mt-3 max-w-4xl text-[17px] leading-relaxed text-white/90">
-          Llevas <strong className="text-white">{formatMoney(st.total)}</strong> en {st.count} venta(s)
+        <p className="relative mt-3 max-w-4xl text-[17px] leading-relaxed text-[color:var(--hero-fg-soft)]">
+          Llevas <strong className="text-[color:var(--hero-fg)]">{formatMoney(st.total)}</strong> en {st.count} venta(s)
           {delta !== null && (
             <>
               {", "}
