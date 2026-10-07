@@ -77,7 +77,7 @@ export default function PaymentDialog({
         <Modal.Container placement="auto">
           <Modal.Dialog className="sm:max-w-md">
             <Modal.CloseTrigger aria-label="Cerrar" />
-            <form onSubmit={submit} className="flex flex-col gap-4">
+            <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
               <Modal.Header>
                 <Modal.Icon className="bg-success-soft text-success-soft-foreground">
                   <Icon name="coin" className="size-5" />

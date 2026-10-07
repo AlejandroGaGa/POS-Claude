@@ -33,7 +33,7 @@ export default function CancelSale({ id, label }: { id: string; label: string })
         <Modal.Container placement="auto">
           <Modal.Dialog className="sm:max-w-md">
             <Modal.CloseTrigger aria-label="Cerrar" />
-            <form onSubmit={submit} className="flex flex-col gap-4">
+            <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
               <Modal.Header>
                 <Modal.Icon className="bg-danger-soft text-danger-soft-foreground">
                   <Icon name="alert" className="size-5" />

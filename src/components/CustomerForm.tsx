@@ -82,7 +82,8 @@ export default function CustomerForm({
       <Modal.Container placement="auto" scroll="inside">
         <Modal.Dialog className="sm:max-w-xl">
           <Modal.CloseTrigger aria-label="Cerrar" />
-          <form onSubmit={submit} className="flex flex-col gap-4">
+          {/* min-h-0 + flex-1: el formulario envuelve el cuerpo del diálogo; sin esto el cuerpo no puede hacer scroll y los botones se salen en pantallas bajas. */}
+          <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
             <Modal.Header>
               <Modal.Icon className="bg-accent-soft text-accent-soft-foreground">
                 <Icon name="person" className="size-5" />

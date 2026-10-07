@@ -191,7 +191,7 @@ export default function UsersManager({ users, meId, myRole, total }: { users: Us
           <Modal.Dialog className="sm:max-w-sm">
             <Modal.CloseTrigger aria-label="Cerrar" />
             <form
-              className="flex flex-col gap-4"
+              className="flex min-h-0 flex-1 flex-col gap-4"
               onSubmit={(e) => {
                 e.preventDefault();
                 if (!pwUser) return;

@@ -53,7 +53,7 @@ function MovementDialog({ kind, open, onOpenChange, chicaBalance }: { kind: Kind
       <Modal.Container placement="auto">
         <Modal.Dialog className="sm:max-w-md">
           <Modal.CloseTrigger aria-label="Cerrar" />
-          <form onSubmit={submit} className="flex flex-col gap-4">
+          <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col gap-4">
             <Modal.Header>
               <Modal.Icon className={cx(kind.type === "salida" ? "bg-danger-soft text-danger-soft-foreground" : kind.type === "entrada" ? "bg-success-soft text-success-soft-foreground" : "bg-accent-soft text-accent-soft-foreground")}>
                 <Icon name={isTransfer ? "transfer" : kind.type === "entrada" ? "down" : "up"} className="size-5" />
