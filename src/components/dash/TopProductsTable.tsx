@@ -24,7 +24,7 @@ export default function TopProductsTable({ rows, grandTotal }: { rows: TopRow[];
     <>
       <ul className="flex flex-col divide-y divide-separator md:hidden">
         {rows.map((r, i) => (
-          <li key={r.code} className="flex items-center gap-3 py-3">
+          <li key={`${r.code}|${r.name}`} className="flex items-center gap-3 py-3">
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-default text-sm font-semibold tabular">{i + 1}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate font-medium">{r.name}</p>
@@ -51,7 +51,7 @@ export default function TopProductsTable({ rows, grandTotal }: { rows: TopRow[];
             </Table.Header>
             <Table.Body>
               {rows.map((r) => (
-                <Table.Row key={r.code} id={r.code}>
+                <Table.Row key={`${r.code}|${r.name}`} id={`${r.code}|${r.name}`}>
                   <Table.Cell>
                     <span className="font-medium">{r.name}</span>
                     <span className="block text-xs text-muted">{r.code}</span>

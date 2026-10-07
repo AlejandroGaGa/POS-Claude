@@ -53,12 +53,14 @@ export default function ReturnsTable({ rows }: { rows: ReturnRow[] }) {
     );
   }
   const href = (r: ReturnRow) => `/notas-devolucion/${r._id}`;
+  // Tarjetas o tabla según el ancho real de la lista (no de la ventana): la tabla solo aparece cuando
+  // caben sus columnas, y la de «Motivo» se agrega cuando hay espacio de sobra.
   return (
-    <div data-results>
-      <ul className="flex flex-col gap-2 md:hidden">
+    <div data-results className="@container">
+      <ul className="grid grid-cols-1 gap-2 @2xl:grid-cols-2 @4xl:hidden">
         {rows.map((r) => (
           <li key={r._id}>
-            <Link href={href(r)} className="flex flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--overlay-shadow)] outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]">
+            <Link href={href(r)} className="flex h-full flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)] transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-[var(--overlay-shadow)] outline-none focus-visible:ring-2 focus-visible:ring-focus active:scale-[0.99]">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold tabular">
                   {r.folio}
@@ -76,7 +78,7 @@ export default function ReturnsTable({ rows }: { rows: ReturnRow[] }) {
                     {r.userName ? ` · ${r.userName}` : ""}
                   </p>
                 </div>
-                <span className="font-display text-xl tabular">
+                <span className="font-display shrink-0 text-xl whitespace-nowrap tabular">
                   <Money r={r} />
                 </span>
               </div>
@@ -85,14 +87,14 @@ export default function ReturnsTable({ rows }: { rows: ReturnRow[] }) {
         ))}
       </ul>
 
-      <Table className="data-table hidden md:block">
+      <Table className="data-table hidden @4xl:block">
         <Table.ScrollContainer>
           <Table.Content aria-label="Devoluciones" onRowAction={(key) => router.push(String(key))}>
             <Table.Header>
               <Table.Column isRowHeader>Folio</Table.Column>
               <Table.Column>Cliente</Table.Column>
               <Table.Column>Fecha</Table.Column>
-              <Table.Column>Motivo</Table.Column>
+              <Table.Column className="hidden @6xl:table-cell">Motivo</Table.Column>
               <Table.Column>Resultado</Table.Column>
               <Table.Column className="text-right">Dinero</Table.Column>
             </Table.Header>
@@ -107,8 +109,8 @@ export default function ReturnsTable({ rows }: { rows: ReturnRow[] }) {
                     </span>
                   </Table.Cell>
                   <Table.Cell>
-                    {r.customerName || <span className="text-muted">Mostrador</span>}
-                    <span className="block max-w-[16rem] truncate text-xs text-muted xl:max-w-[22rem]">
+                    <span className="block max-w-[13rem] truncate @6xl:max-w-[16rem] @7xl:max-w-[22rem]">{r.customerName || <span className="text-muted">Mostrador</span>}</span>
+                    <span className="block max-w-[13rem] truncate text-xs text-muted @6xl:max-w-[16rem] @7xl:max-w-[22rem]">
                       {names(r.returnedItems)}
                       {r.newItems.length ? ` → ${names(r.newItems)}` : ""}
                     </span>
@@ -117,7 +119,7 @@ export default function ReturnsTable({ rows }: { rows: ReturnRow[] }) {
                     <span className="text-muted">{fmtDate(r.createdAt)}</span>
                     {r.userName && <span className="block text-xs text-muted">por {r.userName}</span>}
                   </Table.Cell>
-                  <Table.Cell>
+                  <Table.Cell className="hidden @6xl:table-cell">
                     <span className="block max-w-[12rem] truncate">{r.reason}</span>
                   </Table.Cell>
                   <Table.Cell>

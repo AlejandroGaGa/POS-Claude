@@ -9,6 +9,7 @@ import { getSettings } from "@/lib/models/Settings";
 import { plain } from "@/lib/serialize";
 import { lineSignature, round2, type LineInput, type PaymentMethod, type CustomerType } from "@/lib/pricing";
 import type { ProductJSON } from "@/lib/types";
+import { customFromStored, customProduct, isCustomMode } from "@/lib/customItem";
 import Pos, { type CategoryInfo, type EditQuote } from "@/components/pos/Pos";
 import type { PickedCustomer } from "@/components/CustomerPicker";
 
@@ -26,13 +27,17 @@ async function loadQuoteForEdit(id: string): Promise<EditQuote | null> {
   if (!Types.ObjectId.isValid(id)) return null;
   const q = await Sale.findById(id).lean();
   if (!q || q.kind !== "cotizacion" || q.status !== "vigente") return null;
-  const ids = [...new Set(q.items.map((it) => String(it.product)))];
+  const ids = [...new Set(q.items.flatMap((it) => (it.product ? [String(it.product)] : [])))];
   const products = plain<ProductJSON[]>(await Product.find({ _id: { $in: ids } }).lean());
   const byId = new Map(products.map((p) => [p._id, p]));
   const expired = !!q.validUntil && new Date(q.validUntil).getTime() < Date.now();
   const locked: Record<string, number> = {};
   const lines = q.items.flatMap((it, i) => {
-    const product = byId.get(String(it.product));
+    // En el carrito va el precio de lista cotizado; el extra y el descuento se vuelven a aplicar encima.
+    const unit = it.listUnitPrice ?? it.unitPrice;
+    // Fuera de catálogo: se reconstruye con el nombre y precio guardados en la cotización.
+    const customMode = !it.product && isCustomMode(it.mode) ? it.mode : null;
+    const product = customMode ? customProduct(customFromStored(it), customMode, `${id}-${i}`) : byId.get(String(it.product));
     if (!product) return [];
     const dims = {
       ...(it.lengthM != null ? { lengthM: it.lengthM } : {}),
@@ -41,9 +46,7 @@ async function loadQuoteForEdit(id: string): Promise<EditQuote | null> {
       ...(it.heightM != null ? { heightM: it.heightM } : {}),
     };
     const input: LineInput = { mode: it.mode, qty: it.qty, ...dims };
-    // En el carrito va el precio de lista cotizado; el extra y el descuento se vuelven a aplicar encima.
-    const unit = it.listUnitPrice ?? it.unitPrice;
-    if (!expired) locked[lineSignature(product._id, input)] = unit;
+    if (!expired && !customMode) locked[lineSignature(product._id, input)] = unit;
     return [{ key: `${id}-${i}`, product, input, priced: { mode: it.mode, qty: it.qty, ...dims, unitPrice: unit, subtotal: round2(unit * it.qty), detail: it.detail ?? "" } }];
   });
   return {

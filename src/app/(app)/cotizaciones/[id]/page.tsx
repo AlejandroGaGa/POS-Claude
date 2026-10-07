@@ -4,7 +4,7 @@ import { requirePage } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { getSettings } from "@/lib/models/Settings";
 import { loadSaleFor } from "@/lib/saleAccess";
-import { buildItems } from "@/lib/sales";
+import { buildItems, storedToRawLine } from "@/lib/sales";
 import { adjustLines, shownLine } from "@/lib/adjust";
 import { can } from "@/lib/roles";
 import { formatMoney, formatNumber, round2, type CustomerType } from "@/lib/pricing";
@@ -30,18 +30,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
   let repriceError = "";
   if (expired) {
     try {
-      const items = await buildItems(
-        quote.items.map((it) => ({
-          productId: String(it.product),
-          mode: it.mode,
-          qty: it.qty,
-          lengthM: it.lengthM ?? undefined,
-          barLengthM: it.barLengthM ?? undefined,
-          widthM: it.widthM ?? undefined,
-          heightM: it.heightM ?? undefined,
-        })),
-        (quote.customerType ?? "particular") as CustomerType,
-      );
+      const items = await buildItems(quote.items.map(storedToRawLine), (quote.customerType ?? "particular") as CustomerType);
       // Precios actuales, respetando el extra y el descuento que se le dieron.
       subtotal = round2(adjustLines(items, { extra: quote.extraAmount, discountPct: quote.discountPct }).subtotal);
     } catch (e) {
@@ -86,7 +75,7 @@ export default async function QuotePage({ params, searchParams }: { params: Prom
                 <div className="min-w-0">
                   <p className="font-medium">{it.name}</p>
                   <p className="text-sm text-muted">
-                    {it.code} · {it.detail} · {formatNumber(it.qty)} × {formatMoney(shownLine(it).unitPrice)}
+                    {[it.code, it.detail].filter(Boolean).join(" · ")} · {formatNumber(it.qty)} × {formatMoney(shownLine(it).unitPrice)}
                   </p>
                 </div>
                 <p className="font-semibold whitespace-nowrap tabular">{formatMoney(shownLine(it).subtotal)}</p>

@@ -37,7 +37,7 @@ function Items({ title, items, total, sign }: { title: string; items: Item[]; to
               <td className="py-2 pr-2">
                 <span className="font-semibold">{it.name}</span>
                 <span className="block text-muted">
-                  {it.code} · {it.detail}
+                  {[it.code, it.detail].filter(Boolean).join(" · ")}
                 </span>
               </td>
               <td className="py-2 pr-2 text-right tabular">{formatNumber(it.qty)}</td>

@@ -10,6 +10,8 @@ const bump = (m: Map<string, Agg>, k: string, v: number) => {
   e.count += 1;
   m.set(k, e);
 };
+/** Prefijo de la llave de los productos fuera de catálogo en «más vendidos». */
+const CUSTOM_KEY = "\u0000fuera:";
 const sorted = (m: Map<string, Agg>) => [...m.entries()].map(([k, v]) => ({ _id: k, ...v })).sort((a, b) => b.total - a.total);
 
 /**
@@ -21,7 +23,7 @@ export async function getStats(desde: string, hasta: string) {
   const createdAt = range(desde, hasta);
   const [sales, quotes, cancelled, returns] = await Promise.all([
     Sale.find({ kind: "venta", status: { $ne: "cancelada" }, createdAt })
-      .select("createdAt total commissionAmount paymentMethod sellerName items.code items.name items.category items.subtotal")
+      .select("createdAt total commissionAmount paymentMethod sellerName items.code items.name items.category items.subtotal items.custom")
       .lean(),
     Sale.find({ kind: "cotizacion", createdAt }).select("status").lean(),
     Sale.countDocuments({ kind: "venta", status: "cancelada", createdAt }),
@@ -46,10 +48,12 @@ export async function getStats(desde: string, hasta: string) {
     bump(bySeller, s.sellerName || "—", s.total);
     bump(byDay, dayStr(new Date(s.createdAt)), s.total);
     for (const it of s.items) {
-      const e = byProduct.get(it.code ?? "") ?? { total: 0, count: 0, name: it.name ?? "", category: it.category ?? "" };
+      // Los productos fuera de catálogo no tienen código: se juntan por nombre.
+      const key = it.code || `${CUSTOM_KEY}${(it.name ?? "").trim().toLowerCase()}`;
+      const e = byProduct.get(key) ?? { total: 0, count: 0, name: it.name ?? "", category: it.category ?? "" };
       e.total += it.subtotal;
       e.count += 1;
-      byProduct.set(it.code ?? "", e);
+      byProduct.set(key, e);
       bump(byCategory, it.category || "Sin categoría", it.subtotal);
     }
   }
@@ -68,7 +72,7 @@ export async function getStats(desde: string, hasta: string) {
     bySeller: sorted(bySeller),
     byDay: [...byDay.entries()].map(([k, v]) => ({ _id: k, ...v })).sort((a, b) => a._id.localeCompare(b._id)),
     topProducts: [...byProduct.entries()]
-      .map(([code, v]) => ({ code, name: v.name, category: v.category, total: v.total, lines: v.count }))
+      .map(([code, v]) => ({ code: code.startsWith(CUSTOM_KEY) ? "Sin código" : code, name: v.name, category: v.category, total: v.total, lines: v.count }))
       .sort((a, b) => b.total - a.total)
       .slice(0, 10),
     byCategory: sorted(byCategory),

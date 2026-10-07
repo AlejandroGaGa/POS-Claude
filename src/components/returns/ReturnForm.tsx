@@ -167,8 +167,11 @@ export default function ReturnForm({ sale, defaultPct }: { sale: ReturnSale | nu
   const balance = sale?.balance ?? 0;
 
   return (
-    <form onSubmit={submit} className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start">
-      <div className="flex min-w-0 flex-col gap-4">
+    // Las columnas dependen del ancho real del formulario (no de la ventana): con el menú lateral abierto
+    // en una pantalla mediana el resumen baja en vez de apretar la lista de productos.
+    <div className="@container">
+    <form onSubmit={submit} className="grid grid-cols-1 gap-4 @4xl:grid-cols-[minmax(0,1fr)_380px] @4xl:items-start @5xl:grid-cols-[minmax(0,1fr)_400px]">
+      <div className="@container flex min-w-0 flex-col gap-4">
         {/* 1. Lo que regresa */}
         {sale ? (
           <Section
@@ -177,7 +180,7 @@ export default function ReturnForm({ sale, defaultPct }: { sale: ReturnSale | nu
           >
             <ul className="divide-y divide-separator">
               {saleRows.map(({ it, index, max, raw, bad, value }) => (
-                <li key={index} className={cx("flex flex-col gap-2 py-3 first:pt-0 sm:flex-row sm:items-center sm:justify-between", max <= 0 && "opacity-55")}>
+                <li key={index} className={cx("flex flex-col gap-2 py-3 first:pt-0 @2xl:flex-row @2xl:items-center @2xl:justify-between @2xl:gap-4", max <= 0 && "opacity-55")}>
                   <div className="min-w-0">
                     <p className="font-medium">
                       {it.name}{" "}
@@ -186,15 +189,16 @@ export default function ReturnForm({ sale, defaultPct }: { sale: ReturnSale | nu
                       )}
                     </p>
                     <p className="text-sm text-muted">
-                      {it.code} · {it.detail} · {formatNumber(it.qty)} × {formatMoney(it.unitPrice)}
+                      {[it.code, it.detail].filter(Boolean).join(" · ")} · {formatNumber(it.qty)} × {formatMoney(it.unitPrice)}
                       {(it.returnedQty ?? 0) > 0 && ` · ya devolvió ${formatNumber(it.returnedQty ?? 0)}`}
                     </p>
                   </div>
                   {max > 0 ? (
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2 @2xl:shrink-0 @2xl:flex-nowrap">
                       <label htmlFor={`rq-${index}`} className="sr-only">
                         Cantidad a devolver de {it.name}
                       </label>
+                      <div className="w-24 shrink-0">
                       <Input
                         id={`rq-${index}`}
                         inputMode={INTEGER_MODES.has(it.mode) ? "numeric" : "decimal"}
@@ -205,17 +209,18 @@ export default function ReturnForm({ sale, defaultPct }: { sale: ReturnSale | nu
                           const v = INTEGER_MODES.has(it.mode) ? e.target.value.replace(/\D/g, "") : e.target.value;
                           setRetQty((s) => ({ ...s, [index]: v }));
                         }}
-                        className={cx("w-24 text-center text-lg font-semibold", bad && "border-bad")}
+                        className={cx("text-center text-lg font-semibold", bad && "border-bad")}
                         aria-invalid={bad || undefined}
                         aria-describedby={`rq-${index}-max`}
                       />
+                      </div>
                       <span id={`rq-${index}-max`} className="w-16 text-sm text-muted">
                         de {formatNumber(max)}
                       </span>
                       <Button type="button" variant="ghost" className="min-h-10 px-3 text-sm" onClick={() => setAll(index, max)}>
                         Todo
                       </Button>
-                      <span className="w-24 text-right font-semibold tabular">{value ? formatMoney(value) : ""}</span>
+                      <span className="ml-auto w-24 text-right font-semibold tabular @2xl:ml-0">{value ? formatMoney(value) : ""}</span>
                     </div>
                   ) : (
                     <span className="text-sm text-muted">Ya se devolvió completo</span>
@@ -274,7 +279,7 @@ export default function ReturnForm({ sale, defaultPct }: { sale: ReturnSale | nu
       </div>
 
       {/* Resumen y cobro */}
-      <Section title="Diferencia" className="lg:sticky lg:top-[calc(var(--sticky-top)+0.75rem)]">
+      <Section title="Diferencia" className="@4xl:sticky @4xl:top-[calc(var(--sticky-top)+0.75rem)]">
         <dl className="flex flex-col gap-1.5 tabular">
           <div className="flex justify-between">
             <dt className="text-muted">Devuelve</dt>
@@ -387,5 +392,6 @@ export default function ReturnForm({ sale, defaultPct }: { sale: ReturnSale | nu
         </Button>
       </Section>
     </form>
+    </div>
   );
 }

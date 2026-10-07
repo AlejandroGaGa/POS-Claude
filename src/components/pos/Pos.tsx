@@ -30,6 +30,8 @@ import { Modal, SearchField } from "@heroui/react";
 import CheckoutDialog from "./CheckoutDialog";
 import CustomerDialog from "./CustomerDialog";
 import AdjustDialog from "./AdjustDialog";
+import CustomItemDialog from "./CustomItemDialog";
+import { isCustomProduct, lineToPayload } from "@/lib/customItem";
 import { adjustLines } from "@/lib/adjust";
 import { AnimatePresence, motion } from "framer-motion";
 import { AnimatedNumber, BASE, FAST, PILL_SPRING, Stagger } from "../motion";
@@ -150,6 +152,8 @@ export default function Pos({
   const [dialogVariants, setDialogVariants] = useState<ProductJSON[] | null>(null);
   const [customerType, setCustomerType] = useState<CustomerType>("particular");
   const [editing, setEditing] = useState<CartLine | null>(null);
+  /** Diálogo de producto fuera de catálogo: nombre propuesto al abrirlo, o el renglón que se está cambiando. */
+  const [customItem, setCustomItem] = useState<{ name: string; line: CartLine | null } | null>(null);
 
   const [method, setMethod] = useState<PaymentMethod | null>(null);
   const [pct, setPct] = useState(String(defaultPct));
@@ -372,6 +376,7 @@ export default function Pos({
       }
       setDialogVariants(null);
       setEditing(null);
+      setCustomItem(null);
       searchRef.current?.focus();
     },
     [keepQuoted, customerType, cart],
@@ -427,7 +432,7 @@ export default function Pos({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           kind,
-          items: cart.map((l) => ({ productId: l.product._id, ...l.input })),
+          items: cart.map(lineToPayload),
           paymentMethod: creditOnly ? null : method,
           customerType,
           commissionPct: method === "terminal" ? pctNum : 0,
@@ -459,7 +464,7 @@ export default function Pos({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: cart.map((l) => ({ productId: l.product._id, ...l.input })),
+          items: cart.map(lineToPayload),
           paymentMethod: method,
           customerType,
           commissionPct: method === "terminal" ? pctNum : 0,
@@ -652,6 +657,17 @@ export default function Pos({
           })}
         </Stagger>
         {loadingMore && <SkProductCards n={4} />}
+        {/* Lo que no está en la lista también se puede vender: se captura a mano y sale solo en esta nota. */}
+        {!loading && (
+          <button
+            type="button"
+            onClick={() => setCustomItem({ name: q.trim(), line: null })}
+            className="flex min-h-14 w-full shrink-0 items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border px-4 py-2 text-center text-base font-semibold text-muted outline-none transition-colors hover:border-accent hover:text-accent focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            <Icon name="plus" className="size-5 shrink-0" />
+            <span className="min-w-0">{!browsing && q.trim() ? `¿No está? Vender «${q.trim()}» fuera de catálogo` : "¿No está en la lista? Vender un producto fuera de catálogo"}</span>
+          </button>
+        )}
         {!browsing && !loading && resPage < resPages && (
           <Button variant="secondary" onClick={loadMore} loading={loadingMore} className="self-center">
             {`Cargar más (${resTotal - results.length} restantes)`}
@@ -747,6 +763,7 @@ export default function Pos({
                       <div className="relative flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-lg leading-snug font-semibold">{l.product.name}</p>
+                          {isCustomProduct(l.product) && <p className="text-sm font-semibold text-warn">Fuera de catálogo</p>}
                           <p className="text-base text-muted">
                             {l.priced.detail} · {formatMoney(shown?.shownUnitPrice ?? l.priced.unitPrice)} c/u
                           </p>
@@ -786,6 +803,8 @@ export default function Pos({
                           <button
                             type="button"
                             onClick={() => {
+                              // Fuera de catálogo: se cambia en su propio diálogo (nombre, precio y cantidad).
+                              if (isCustomProduct(l.product)) return setCustomItem({ name: l.product.name, line: l });
                               setEditing(l);
                               setDialogVariants(variantsOf(l.product));
                             }}
@@ -916,6 +935,8 @@ export default function Pos({
           setDiscount(d);
         }}
       />
+
+      <CustomItemDialog open={customItem !== null} initialName={customItem?.name} initial={customItem?.line} onClose={() => setCustomItem(null)} onConfirm={confirmLine} />
 
       <CustomerDialog
         open={custOpen}

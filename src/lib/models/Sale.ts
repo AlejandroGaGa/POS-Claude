@@ -3,7 +3,9 @@ import { CUSTOMER_TYPES, PAYMENT_METHODS, SALE_MODES } from "../pricing";
 
 const ItemSchema = new Schema(
   {
-    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    /** Producto del catálogo; `null` si es un producto fuera de catálogo (entonces `custom` es true). */
+    product: { type: Schema.Types.ObjectId, ref: "Product", default: null },
+    custom: Boolean,
     code: String,
     name: String,
     category: String,

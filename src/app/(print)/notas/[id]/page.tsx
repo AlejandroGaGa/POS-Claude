@@ -189,7 +189,7 @@ export default async function NotaPage({ params, searchParams }: { params: Promi
                 <td className="py-2 pr-2">
                   <span className="font-semibold">{it.name}</span>
                   <span className="block text-muted">
-                    {it.code} · {it.detail}
+                    {[it.code, it.detail].filter(Boolean).join(" · ")}
                   </span>
                   <span className="block text-muted sm:hidden">P. unit. {formatMoney(shownLine(it).unitPrice)}</span>
                 </td>

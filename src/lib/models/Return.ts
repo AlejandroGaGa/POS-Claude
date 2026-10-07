@@ -5,7 +5,9 @@ import { RETURN_MODES, RETURN_OUTCOMES } from "../returns";
 /** Renglón devuelto o renglón nuevo del cambio (misma forma que los renglones de una venta). */
 const ReturnItemSchema = new Schema(
   {
-    product: { type: Schema.Types.ObjectId, ref: "Product", required: true },
+    /** Producto del catálogo; `null` si es un producto fuera de catálogo (entonces `custom` es true). */
+    product: { type: Schema.Types.ObjectId, ref: "Product", default: null },
+    custom: Boolean,
     code: String,
     name: String,
     category: String,

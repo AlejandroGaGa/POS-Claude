@@ -12,18 +12,58 @@ import { escapeRegex } from "./text";
 import type { SessionUser } from "./session";
 import type { z } from "zod";
 import type { LineInputSchema } from "./validation";
+import { CUSTOM_CATEGORY, customFromStored, customPricing, isCustomMode } from "./customItem";
 
 type RawLine = z.infer<typeof LineInputSchema>;
 
-/** Recalcula cada renglón con los precios vigentes en la base (nunca confía en el navegador). */
+/** Renglón guardado → entrada para volver a calcularlo (p. ej. al cobrar una cotización vencida). */
+export function storedToRawLine(it: {
+  product?: unknown;
+  name?: string | null;
+  mode: RawLine["mode"];
+  qty: number;
+  detail?: string | null;
+  unitPrice: number;
+  listUnitPrice?: number | null;
+  lengthM?: number | null;
+  barLengthM?: number | null;
+  widthM?: number | null;
+  heightM?: number | null;
+}): RawLine {
+  // Fuera de catálogo: no hay precio de lista que consultar; se conserva el que se capturó.
+  if (!it.product) return { custom: customFromStored(it), mode: it.mode, qty: it.qty };
+  return {
+    productId: String(it.product),
+    mode: it.mode,
+    qty: it.qty,
+    lengthM: it.lengthM ?? undefined,
+    barLengthM: it.barLengthM ?? undefined,
+    widthM: it.widthM ?? undefined,
+    heightM: it.heightM ?? undefined,
+  };
+}
+
+/**
+ * Recalcula cada renglón con los precios vigentes en la base (nunca confía en el navegador).
+ * La excepción son los productos fuera de catálogo: ahí el precio es el que capturó el vendedor.
+ */
 export async function buildItems(lines: RawLine[], customerType: CustomerType = "particular") {
-  const ids = [...new Set(lines.map((l) => l.productId))];
+  const ids = [...new Set(lines.flatMap((l) => (l.productId ? [l.productId] : [])))];
   if (ids.some((id) => !Types.ObjectId.isValid(id))) throw new HttpError(400, "Producto inválido.");
-  const products = await Product.find({ _id: { $in: ids } }).lean();
+  const products = ids.length ? await Product.find({ _id: { $in: ids } }).lean() : [];
   const byId = new Map(products.map((p) => [String(p._id), p]));
 
   return lines.map((l, i) => {
-    const p = byId.get(l.productId);
+    if (l.custom) {
+      if (!isCustomMode(l.mode)) throw new HttpError(400, `${l.custom.name}: un producto fuera de catálogo se vende por pieza, kilo o metro.`);
+      try {
+        const priced = priceLine(customPricing(l.custom, l.mode), l);
+        return { product: null, custom: true, code: "", name: l.custom.name, category: CUSTOM_CATEGORY, ...priced };
+      } catch (e) {
+        throw new HttpError(400, `${l.custom.name}: ${(e as Error).message}`);
+      }
+    }
+    const p = byId.get(l.productId ?? "");
     if (!p || !p.active) throw new HttpError(400, `Renglón ${i + 1}: el producto ya no está disponible.`);
     try {
       const priced = priceLine(p as unknown as ProductPricing, l, { customerType });
@@ -216,18 +256,7 @@ export async function convertQuote(
   const quoteAdj: AdjustOptions = { extra: quote.extraAmount, discountPct: quote.discountPct };
   let adjFields = { extraAmount: quote.extraAmount ?? 0, discountPct: quote.discountPct ?? 0, discountAmount: quote.discountAmount ?? 0, shownSubtotal: quote.shownSubtotal ?? null };
   const items = expired
-    ? await buildItems(
-        quote.items.map((it) => ({
-          productId: String(it.product),
-          mode: it.mode,
-          qty: it.qty,
-          lengthM: it.lengthM ?? undefined,
-          barLengthM: it.barLengthM ?? undefined,
-          widthM: it.widthM ?? undefined,
-          heightM: it.heightM ?? undefined,
-        })),
-        (quote.customerType ?? "particular") as CustomerType,
-      ).then((built) => {
+    ? await buildItems(quote.items.map(storedToRawLine), (quote.customerType ?? "particular") as CustomerType).then((built) => {
         // Venció: precios actuales, pero se respetan el extra y el descuento que se le dieron.
         const a = applyAdjust(built, quoteAdj);
         adjFields = a.fields;
@@ -301,8 +330,10 @@ export async function updateQuote(
   let kept = 0;
   if (!expired && sameType) {
     // Precio cotizado de lista (antes del extra y del descuento, que se vuelven a aplicar abajo).
-    const quoted = new Map(quote.items.map((it) => [lineSignature(String(it.product), it), it.listUnitPrice ?? it.unitPrice]));
+    // Solo productos del catálogo: en los de fuera de catálogo manda el precio que se acaba de capturar.
+    const quoted = new Map(quote.items.filter((it) => it.product).map((it) => [lineSignature(String(it.product), it), it.listUnitPrice ?? it.unitPrice]));
     items = items.map((it) => {
+      if (!it.product) return it;
       const unit = quoted.get(lineSignature(String(it.product), it));
       if (unit === undefined) return it;
       kept++;

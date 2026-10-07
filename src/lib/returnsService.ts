@@ -114,7 +114,8 @@ export async function createReturn(user: SessionUser, input: ReturnInputT) {
       }
       qtyByIndex.set(r.index, qty);
       returnedItems.push({
-        product: it.product,
+        product: it.product ?? null,
+        custom: it.custom || undefined,
         code: it.code,
         name: it.name,
         category: it.category,

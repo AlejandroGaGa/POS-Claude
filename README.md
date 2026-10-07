@@ -27,6 +27,9 @@ Next.js 15 (App Router) + MongoDB (Mongoose), listo para desplegar en Vercel con
 - **Cancelaciones** con motivo (solo el administrador cancela ventas); no cuentan en estadísticas.
 - **Editar cotizaciones guardadas**: «Agregar o quitar productos» la abre en el mostrador; lo que ya estaba conserva
   el precio cotizado (si sigue vigente) y lo nuevo entra a precio actual. Se guarda en el mismo folio o se cobra directo.
+- **Productos fuera de catálogo**: si algo no está en la lista, en el mostrador se captura a mano (nombre, precio por pieza/kilo/metro
+  y cantidad) y entra a la venta o cotización como un renglón más. No se da de alta: solo existe en esa nota, con la
+  categoría «Fuera de catálogo» en las estadísticas. Es el único caso en que el precio lo pone el vendedor y no la base.
 - **Clientes**: se registran solos al vender/cotizar con nombre; buscador en el mostrador (nombre o teléfono) y módulo
   con alta, edición, historial, saldo y botón «Vender».
 - **Datos de facturación**: varias razones sociales por cliente (RFC, régimen, uso de CFDI, C.P., correo) con botón

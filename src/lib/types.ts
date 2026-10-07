@@ -20,5 +20,7 @@ export interface ProductJSON {
   group?: string;
   notes?: string;
   active: boolean;
+  /** Producto fuera de catálogo (solo existe en el carrito y en su nota; ver lib/customItem). */
+  custom?: boolean;
   updatedAt?: string;
 }

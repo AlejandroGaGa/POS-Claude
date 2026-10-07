@@ -3,6 +3,7 @@ import { HttpError } from "./errors";
 import { CUSTOMER_TYPES, PAYMENT_METHODS, SALE_MODES, UNIT_TYPES } from "./pricing";
 import { ROLES } from "./roles";
 import { RETURN_MODES } from "./returns";
+import { CUSTOM_MAX_PRICE, isCustomMode } from "./customItem";
 
 /** Valida y lanza un 400 con el primer mensaje legible. */
 export function parse<T extends z.ZodType>(schema: T, data: unknown): z.infer<T> {
@@ -45,15 +46,29 @@ export const ProductInput = z.object({
 });
 export type ProductInputT = z.infer<typeof ProductInput>;
 
-export const LineInputSchema = z.object({
-  productId: z.string().min(1),
-  mode: z.enum(SALE_MODES),
-  qty: num.positive("La cantidad debe ser mayor a 0"),
-  lengthM: num.positive().optional(),
-  barLengthM: num.positive().optional(),
-  widthM: num.positive().optional(),
-  heightM: num.positive().optional(),
+/** Producto fuera de catálogo: lo captura el vendedor en la venta y no se da de alta. */
+export const CustomItemSchema = z.object({
+  name: z.string().trim().min(2, "Escribe el nombre del producto").max(160),
+  price: num.positive("El precio debe ser mayor a 0").max(CUSTOM_MAX_PRICE, "El precio es demasiado alto"),
+  unitLabel: z.string().trim().max(20).optional(),
 });
+
+/** Un renglón: un producto del catálogo (`productId`) o uno fuera de catálogo (`custom`), nunca los dos. */
+export const LineInputSchema = z
+  .object({
+    productId: z.string().min(1).optional(),
+    custom: CustomItemSchema.optional(),
+    mode: z.enum(SALE_MODES),
+    qty: num.positive("La cantidad debe ser mayor a 0"),
+    lengthM: num.positive().optional(),
+    barLengthM: num.positive().optional(),
+    widthM: num.positive().optional(),
+    heightM: num.positive().optional(),
+  })
+  .superRefine((l, ctx) => {
+    if (!!l.productId === !!l.custom) ctx.addIssue({ code: "custom", message: "Cada renglón lleva un producto del catálogo o uno fuera de catálogo." });
+    else if (l.custom && !isCustomMode(l.mode)) ctx.addIssue({ code: "custom", message: "Un producto fuera de catálogo se vende por pieza, kilo o metro." });
+  });
 
 export const SaleInput = z.object({
   kind: z.enum(["venta", "cotizacion"]),
