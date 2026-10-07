@@ -169,10 +169,10 @@ export function SkList({ items = 4, className }: { items?: number; className?: s
   );
 }
 
-/** Tarjetas de producto del mostrador. */
+/** Tarjetas de producto del mostrador (las columnas siguen el ancho del panel `@container` que las contiene). */
 export function SkProductCards({ n = 6, className }: { n?: number; className?: string }) {
   return (
-    <div aria-hidden className={cx("grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3", className)}>
+    <div aria-hidden className={cx("grid grid-cols-1 gap-3 @md:grid-cols-2 @2xl:grid-cols-3", className)}>
       {Array.from({ length: n }, (_, i) => (
         <div key={i} className="flex min-h-28 flex-col gap-2 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)]">
           <Sk className="h-3 w-28" />
@@ -190,14 +190,14 @@ export function SkPos() {
     <SkPage>
       <SkHeader actions={0} />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_400px] lg:items-start lg:gap-5">
-        <div className="flex flex-col gap-4">
+        <div className="@container flex min-w-0 flex-col gap-4">
           <Sk className="h-14 rounded-2xl" />
           <div className="flex gap-2 overflow-hidden">
             {[16, 20, 22, 26, 18, 22, 20].map((w, i) => (
               <Sk key={i} className="h-10 shrink-0 rounded-full" style={{ width: `${w * 4}px` }} />
             ))}
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 @md:grid-cols-3 @2xl:grid-cols-4">
             {Array.from({ length: 12 }, (_, i) => (
               <div key={i} className="flex min-h-24 flex-col justify-between gap-3 rounded-2xl bg-surface p-4 shadow-[var(--surface-shadow)]">
                 <Sk className="size-10 rounded-xl" />

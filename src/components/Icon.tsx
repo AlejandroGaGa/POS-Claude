@@ -9,6 +9,8 @@ import {
   ChevronLeft,
   ChevronDown,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   CircleInfo,
   ArrowUpFromLine,
   CircleCheck,
@@ -92,6 +94,8 @@ const icons = {
   chat: CommentDot,
   download: ArrowDownToLine,
   undo: ArrowRotateLeft,
+  collapse: ChevronsLeft,
+  expand: ChevronsRight,
 } satisfies Record<string, ComponentType<SVGProps<SVGSVGElement>>>;
 
 export type IconName = keyof typeof icons;

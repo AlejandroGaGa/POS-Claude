@@ -534,7 +534,7 @@ export default function Pos({
       {/* Buscador y resultados */}
       <section
         aria-label="Productos"
-        className={cx("flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-1 pb-4 lg:h-full", tab !== "productos" && "hidden lg:flex", count > 0 && "pb-24 lg:pb-4")}
+        className={cx("@container flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto px-1 pb-4 lg:h-full", tab !== "productos" && "hidden lg:flex", count > 0 && "pb-24 lg:pb-4")}
       >
         <div className="sticky top-0 z-10 flex flex-col gap-3 bg-background/90 pt-1 pb-3 backdrop-blur-md">
         <SearchField aria-label="Buscar producto" value={q} onChange={setQ} className="w-full">
@@ -568,7 +568,7 @@ export default function Pos({
         </div>
 
         {browsing && (
-          <Stagger as="ul" className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4" stagger={0.025}>
+          <Stagger as="ul" className="grid grid-cols-2 gap-3 @md:grid-cols-3 @2xl:grid-cols-4" stagger={0.025}>
             {categories.map((c) => (
               <Fragment key={c.name}>
                 <button
@@ -603,7 +603,7 @@ export default function Pos({
           </EmptyState>
         )}
 
-        <Stagger as="ul" key={`${q}|${category}|${groups.length}`} className={cx("grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3", loading && "hidden")} stagger={0.025} maxAnimated={12}>
+        <Stagger as="ul" key={`${q}|${category}|${groups.length}`} className={cx("grid grid-cols-1 gap-3 @md:grid-cols-2 @2xl:grid-cols-3", loading && "hidden")} stagger={0.025} maxAnimated={12}>
           {groups.map((g) => {
             const first = g.find(hasPrice) ?? g[0];
             const multi = g.length > 1;

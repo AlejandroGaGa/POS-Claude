@@ -7,12 +7,12 @@ import { ROLE_LABELS } from "@/lib/roles";
 import type { SessionUser } from "@/lib/session";
 import { btn, cx } from "./ui";
 import Icon, { type IconName } from "./Icon";
-import Logo from "./Logo";
+import Logo, { SiacIcon } from "./Logo";
 import { motion } from "framer-motion";
 import { PILL_SPRING } from "./motion";
 import ThemeToggle from "./ThemeToggle";
 import AppFooter from "./AppFooter";
-import { APP_VERSION } from "@/lib/brand";
+import { APP_NAME, APP_VERSION } from "@/lib/brand";
 import { TopProgress } from "./NavProgress";
 
 export interface NavItem {
@@ -116,6 +116,21 @@ function NavList({ nav, pathname, onNavigate, pillId }: { nav: NavItem[]; pathna
   );
 }
 
+/**
+ * Menú lateral en escritorio: completo (272px) o angosto (88px, solo accesos rápidos).
+ * Sin elección guardada es automático: angosto en pantallas de 1024 a 1279px y completo de 1280 en adelante,
+ * para que el contenido no se apriete. El botón «Ocultar menú» / «Ampliar» lo fija en este dispositivo.
+ */
+type SidebarPref = "open" | "closed" | null;
+const SIDEBAR_KEY = "siac-sidebar";
+const SIDEBAR_CLS: Record<"open" | "closed" | "auto", { full: string; rail: string }> = {
+  auto: { full: "xl:flex", rail: "lg:flex xl:hidden" },
+  open: { full: "lg:flex", rail: "" },
+  closed: { full: "", rail: "lg:flex" },
+};
+const RAIL_BTN =
+  "flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-2xl text-xs font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-focus";
+
 /** Versión del sistema en la barra lateral / menú. */
 function VersionTag() {
   return (
@@ -151,12 +166,30 @@ function UserCard({ user, onLogout }: { user: SessionUser; onLogout: () => void 
 export default function Shell({ user, nav, children }: { user: SessionUser; nav: NavItem[]; children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [sidebar, setSidebar] = useState<SidebarPref>(null);
   const bottom = nav.filter((n) => n.primary).slice(0, 5);
   const canSell = nav.some((n) => n.href === "/mostrador");
   /** Pantallas que se ajustan al alto de la ventana (sin scroll de página). */
   const fitScreen = pathname === "/mostrador";
 
   useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(SIDEBAR_KEY);
+      if (v === "open" || v === "closed") setSidebar(v);
+    } catch {
+      /* sin almacenamiento: queda en automático */
+    }
+  }, []);
+  function pinSidebar(v: "open" | "closed") {
+    setSidebar(v);
+    try {
+      localStorage.setItem(SIDEBAR_KEY, v);
+    } catch {
+      /* aplica solo en esta visita */
+    }
+  }
+  const sideCls = SIDEBAR_CLS[sidebar ?? "auto"];
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -167,7 +200,7 @@ export default function Shell({ user, nav, children }: { user: SessionUser; nav:
     <div className="min-h-[100dvh] lg:flex lg:gap-2 lg:p-3">
       <TopProgress />
       {/* Sidebar de escritorio */}
-      <aside className="no-print sticky top-3 hidden h-[calc(100dvh-1.5rem)] w-[272px] shrink-0 flex-col gap-4 rounded-3xl bg-surface p-4 shadow-[var(--surface-shadow)] lg:flex">
+      <aside className={cx("no-print sticky top-3 hidden h-[calc(100dvh-1.5rem)] w-[272px] shrink-0 flex-col gap-4 rounded-3xl bg-surface p-4 shadow-[var(--surface-shadow)]", sideCls.full)}>
         <Logo />
         <GlobalSearch />
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -175,9 +208,54 @@ export default function Shell({ user, nav, children }: { user: SessionUser; nav:
         </div>
         <div className="flex flex-col gap-2">
           <VersionTag />
+          <button
+            type="button"
+            onClick={() => pinSidebar("closed")}
+            className="flex min-h-10 w-full items-center gap-2 rounded-xl px-3 text-[15px] font-medium text-muted transition-colors outline-none hover:bg-default hover:text-foreground focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            <Icon name="collapse" />
+            <span>Ocultar menú</span>
+          </button>
           <ThemeToggle withLabel />
           <UserCard user={user} onLogout={logout} />
         </div>
+      </aside>
+
+      {/* Menú angosto de escritorio: deja el ancho para el contenido. «Menú» abre el menú completo encima. */}
+      <aside
+        aria-label="Menú angosto"
+        className={cx("no-print sticky top-3 hidden h-[calc(100dvh-1.5rem)] w-[88px] shrink-0 flex-col items-center gap-1.5 rounded-3xl bg-surface px-2 py-3 shadow-[var(--surface-shadow)]", sideCls.rail)}
+      >
+        <Link href="/" aria-label={`${APP_NAME}: inicio`} className="flex min-h-12 w-full items-center justify-center rounded-2xl outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-focus">
+          <SiacIcon bold className="h-9 w-auto" />
+        </Link>
+        <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className={cx(RAIL_BTN, "text-foreground hover:bg-default")}>
+          <Icon name="menu" className="size-6" />
+          Menú
+        </button>
+        <nav aria-label="Accesos rápidos" className="min-h-0 w-full flex-1 overflow-y-auto border-t border-separator pt-1.5">
+          <ul className="flex flex-col gap-1">
+            {bottom.map((n) => {
+              const active = pathname === n.href || pathname.startsWith(n.href + "/");
+              return (
+                <li key={n.href}>
+                  <Link href={n.href} aria-current={active ? "page" : undefined} title={n.label} className={cx(RAIL_BTN, active ? "text-accent" : "text-muted hover:bg-default/50 hover:text-foreground")}>
+                    <span className="relative flex h-8 w-14 items-center justify-center">
+                      {active && <motion.span layoutId="rail-pill" transition={PILL_SPRING} className="absolute inset-0 rounded-full bg-accent-soft" />}
+                      <Icon name={n.icon} className="relative size-5" />
+                    </span>
+                    {n.short}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+        <button type="button" onClick={() => pinSidebar("open")} title="Mostrar el menú completo" className={cx(RAIL_BTN, "text-muted hover:bg-default hover:text-foreground")}>
+          <Icon name="expand" />
+          Ampliar
+        </button>
+        <ThemeToggle className="min-h-11 w-full" />
       </aside>
 
       {/* Barra superior en celular/tablet */}
