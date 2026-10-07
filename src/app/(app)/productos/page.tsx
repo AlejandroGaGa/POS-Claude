@@ -3,7 +3,7 @@ import { requirePage } from "@/lib/auth";
 import { connectDB } from "@/lib/db";
 import { Product } from "@/lib/models/Product";
 import { can } from "@/lib/roles";
-import { escapeRegex } from "@/lib/text";
+import { productSearchFilter } from "@/lib/productSearch";
 import { priceSummary } from "@/lib/productSummary";
 import { availableModes, type ProductPricing } from "@/lib/pricing";
 import { fmtDate } from "@/lib/labels";
@@ -25,13 +25,8 @@ export default async function ProductosPage({ searchParams }: { searchParams: Pr
   const filter: Record<string, unknown> = {};
   if (!(editor && sp.inactivos === "1")) filter.active = true;
   if (sp.categoria) filter.category = sp.categoria;
-  if (sp.q?.trim()) {
-    filter.$and = sp.q
-      .trim()
-      .split(/\s+/)
-      .map((t) => new RegExp(escapeRegex(t), "i"))
-      .map((rx) => ({ $or: [{ name: rx }, { group: rx }, { code: rx }, { category: rx }, { line: rx }, { color: rx }] }));
-  }
+  const search = productSearchFilter(sp.q);
+  if (search.length) filter.$and = search;
   const page = Math.max(1, Number.parseInt(sp.pagina ?? "1", 10) || 1);
   const [products, total, categories] = await Promise.all([
     Product.find(filter)

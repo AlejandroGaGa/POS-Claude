@@ -4,7 +4,7 @@ import { handle, requireApi } from "@/lib/auth";
 import { Product } from "@/lib/models/Product";
 import { PriceLog } from "@/lib/models/PriceLog";
 import { ProductInput, parse } from "@/lib/validation";
-import { escapeRegex } from "@/lib/text";
+import { productSearchFilter } from "@/lib/productSearch";
 import { parsePage } from "@/lib/paginate";
 
 export const GET = handle(async (req: Request) => {
@@ -15,10 +15,9 @@ export const GET = handle(async (req: Request) => {
   const category = url.searchParams.get("category") ?? "";
   const filter: Record<string, unknown> = { active: true };
   if (category) filter.category = category;
-  if (q) {
-    const terms = q.split(/\s+/).filter(Boolean).map((t) => new RegExp(escapeRegex(t), "i"));
-    filter.$and = terms.map((rx) => ({ $or: [{ name: rx }, { group: rx }, { code: rx }, { category: rx }, { line: rx }, { color: rx }] }));
-  }
+  // Sin exigir acentos, comillas, guiones ni × tal cual están en el catálogo.
+  const search = productSearchFilter(q);
+  if (search.length) filter.$and = search;
   // Paginación con MongoDB: ?pagina=N (60 por página) + total para "Cargar más".
   const size = 60;
   const page = parsePage(url.searchParams.get("pagina"));
